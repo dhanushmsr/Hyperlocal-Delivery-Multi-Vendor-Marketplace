@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %} {{ bill_title }} | FASTX {% endblock %}
+
+{% block content %}
+<style>
+    .invoice-container { max-width: 800px; margin: 40px auto; background: white; padding: 40px; box-shadow: 0 0 15px rgba(0,0,0,0.05); }
+    .invoice-header { border-bottom: 2px solid #232f3e; padding-bottom: 20px; margin-bottom: 30px; }
+    .brand-text { color: #232f3e; font-weight: 900; font-size: 2rem; letter-spacing: -1px; }
+    .brand-x { color: #ff9800; }
+    
+    @media print {
+        @page { size: A4 portrait; margin: 10mm; }
+        body { background-color: white; margin: 0; padding: 0; }
+        
+        /* Hides the base.html navbar and footer when printing */
+        header, footer, nav, .navbar, .sidebar, .mobile-bottom-nav { display: none !important; }
+        
+        /* Let the invoice fill the page naturally */
+        .invoice-container { box-shadow: none; margin: 0; padding: 0; width: 100%; max-height: none; overflow: visible; }
+        .no-print { display: none !important; }
+        
+        .table td, .table th { padding: 4px 8px !important; font-size: 0.85rem; }
+        .fs-5 { font-size: 1rem !important; }
+        .fs-4 { font-size: 1.1rem !important; }
+        small { font-size: 0.7rem !important; }
+        .mb-5 { margin-bottom: 1.5rem !important; }
+        .mb-4 { margin-bottom: 1rem !important; }
+        .p-3 { padding: 0.75rem !important; }
+    }
+</style>
+
+<div class="container py-4">
+    <div class="invoice-container rounded-4">
+        
+        <div class="d-flex justify-content-between mb-4 no-print border-bottom pb-3">
+            <button onclick="window.history.back()" class="btn btn-outline-dark rounded-pill px-4 fw-bold shadow-sm">
+                <i class="bi bi-arrow-left me-2"></i> Go Back
+            </button>
+            <button onclick="window.print()" class="btn btn-dark rounded-pill px-4 shadow-sm">
+                <i class="bi bi-printer me-2"></i> Print / Save PDF
+            </button>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center invoice-header mt-3">
+            <div>
+                <h1 class="brand-text m-0">FAST<span class="brand-x">X</span></h1>
+                <p class="text-muted small mb-0">10-Minute Delivery Network</p>
+                <p class="text-dark small fw-bold mb-0 mt-1">{{ company_branding }}</p>
+            </div>
+            <div class="text-end">
+                <h4 class="fw-bold mb-1 text-uppercase">{{ bill_title }}</h4>
+                <p class="text-muted mb-0">Order: #{{ order.order_id }}</p>
+                <p class="text-muted small mb-0">Date: {{ order.created_at|date:"M d, Y, h:i A" }}</p>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-sm-6">
+                <h6 class="fw-bold text-muted text-uppercase small">Billed By</h6>
+                <strong class="d-block fs-5">{{ billed_by }}</strong>
+                <div class="text-muted small mt-1">
+                    {% if invoice_type == 'product' %}
+                        GSTIN: {{ seller_gst }}<br>
+                        {{ order.vendor.address|default:"Address on file" }}
+                    {% else %}
+                        GSTIN: {{ fastx_gst }}<br>
+                        Bengaluru, Karnataka, India
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-sm-6 text-sm-end mt-4 mt-sm-0">
+                <h6 class="fw-bold text-muted text-uppercase small">Billed To</h6>
+                {% if invoice_type == 'commission' %}
+                    <strong class="d-block fs-5">{{ billed_to }}</strong>
+                    <div class="text-muted small mt-1 lh-sm">
+                        GSTIN: {{ order.vendor.gst_number|default:"Unregistered" }}<br>
+                        {{ order.vendor.address }}
+                    </div>
+                {% else %}
+                    <strong class="d-block fs-5">{{ order.user.get_full_name|default:order.user.username }}</strong>
+                    <div class="text-muted small mt-1 lh-sm">
+                        {{ order.user.customer_profile.phone_number|default:"No Phone Provided" }}<br>
+                        {{ order.delivery_address|default:"Address not recorded at checkout." }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- NEW: LIVE PAYMENT METADATA & TRANSACTION ENGINE BLOCK -->
+        <div class="p-3 bg-light rounded-3 mb-4 border d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <span class="text-muted small d-block text-uppercase fw-bold">Payment Method</span>
+                <span class="text-dark fw-bold">
+                    {% if order.payment_method == 'Online' %}
+                        <i class="bi bi-credit-card-2-front-fill text-primary me-1"></i> Online (Razorpay Gateway)
+                    {% else %}
+                        <i class="bi bi-cash-coin text-success me-1"></i> Cash On Delivery (COD)
+                    {% endif %}
+                </span>
+            </div>
+
+            {% if order.razorpay_payment_id %}
+            <div>
+                <span class="text-muted small d-block text-uppercase fw-bold">Razorpay Transaction ID</span>
+                <code class="text-dark fw-bold small bg-white border px-2 py-1 rounded">{{ order.razorpay_payment_id }}</code>
+            </div>
+            {% endif %}
+
+            <div class="text-sm-end">
+                <span class="text-muted small d-block text-uppercase fw-bold">Payment Status</span>
+                {% if order.is_paid or order.payment_method == 'COD' and order.status == 'Delivered' %}
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-1 fw-bold">
+                        <i class="bi bi-shield-check-fill me-1"></i> SUCCESS / PAID
+                    </span>
+                {% elif order.payment_method == 'COD' %}
+                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill px-3 py-1 fw-bold text-dark">
+                        <i class="bi bi-clock-history me-1"></i> PAY ON DELIVERY
+                    </span>
+                {% else %}
+                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-3 py-1 fw-bold">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i> UNPAID / PENDING
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- NEW: CONSOLIDATED SPLIT-ORDER DISPATCH VERIFICATION ALIGNMENT BANNER -->
+        {% if '-' in order.order_id or invoice_type == 'product' and display_items|length > 1 %}
+        <div class="alert alert-info border-0 rounded-3 py-2 px-3 mb-4 small d-flex align-items-center">
+            <i class="bi bi-patch-check-fill fs-5 text-info me-2"></i>
+            <div>
+                <strong>Multi-Hub Split Order Consolidation:</strong> This invoice automatically aggregates items dispatched from distributed hyper-local dark stores. Payment routing signatures have been successfully mapped and validated.
+            </div>
+        </div>
+        {% endif %}
+
+        {% if invoice_type == 'product' %}
+        <table class="table table-borderless mb-4 border">
+            <thead class="border-bottom border-dark table-light">
+                <tr>
+                    <th class="text-muted text-uppercase small">Item Description</th>
+                    <th class="text-center text-muted text-uppercase small">HSN Code</th>
+                    <th class="text-center text-muted text-uppercase small">Qty</th>
+                    <th class="text-end text-muted text-uppercase small">Unit Price</th>
+                    <th class="text-end text-muted text-uppercase small">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in display_items %}
+                <tr class="border-bottom">
+                    <td class="fw-medium">{{ item.product.name|default:item.product_name }}</td>
+                    <td class="text-center text-muted">{{ item.product.hsn_code|default:"0000" }}</td>
+                    <td class="text-center">{{ item.quantity }}</td>
+                    <td class="text-end">₹{{ item.price|floatformat:2 }}</td>
+                    <td class="text-end fw-bold">₹{{ item.line_total|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center py-4 text-muted">No items available for this view.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="row justify-content-end">
+            <div class="col-sm-6 col-md-5">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Item Subtotal</span>
+                    <span>₹{{ subtotal|floatformat:2 }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Structured GST (5%)</span>
+                    <span>₹{{ tax|floatformat:2 }}</span>
+                </div>
+                
+                {% if wallet_applied and wallet_applied > 0 %}
+                <div class="d-flex justify-content-between mb-2 text-success fw-bold">
+                    <span>FASTX Wallet Deducted</span>
+                    <span>-₹{{ wallet_applied|floatformat:2 }}</span>
+                </div>
+                {% endif %}
+
+                {% if discount > 0 %}
+                <div class="d-flex justify-content-between mb-2 text-success fw-bold">
+                    <span>Coupon Applied ({{ coupon_code|default:"FASTX50" }})</span>
+                    <span>-₹{{ discount|floatformat:2 }}</span>
+                </div>
+                {% endif %}
+
+                <hr class="opacity-25 my-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <strong class="fs-5">Invoice Total</strong>
+                    <strong class="fs-4 text-dark">₹{{ grand_total|floatformat:2 }}</strong>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if invoice_type == 'delivery' %}
+        <table class="table table-borderless mb-4 border">
+            <thead class="border-bottom border-dark table-light">
+                <tr>
+                    <th class="text-muted text-uppercase small">Service Description</th>
+                    <th class="text-center text-muted text-uppercase small">SAC Code</th>
+                    <th class="text-end text-muted text-uppercase small">Total Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="border-bottom">
+                    <td class="fw-medium">Hyperlocal Delivery & Fulfillment Services</td>
+                    <td class="text-center text-muted">{{ sac_code|default:"996813" }}</td>
+                    <td class="text-end fw-bold">₹{{ delivery_fee|floatformat:2 }}</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div class="row justify-content-end">
+            <div class="col-sm-6 col-md-5">
+                <div class="d-flex justify-content-between align-items-center border-top pt-3">
+                    <strong class="fs-5">Invoice Total</strong>
+                    <strong class="fs-4 text-dark">₹{{ grand_total|floatformat:2 }}</strong>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if invoice_type == 'commission' %}
+        <table class="table table-borderless mb-4 border">
+            <thead class="border-bottom border-dark table-light">
+                <tr>
+                    <th class="text-muted text-uppercase small">Service Description</th>
+                    <th class="text-center text-muted text-uppercase small">SAC Code</th>
+                    <th class="text-end text-muted text-uppercase small">Total Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="border-bottom">
+                    <td class="fw-medium">Marketplace Facilitation & Technology Fee (10%)</td>
+                    <td class="text-center text-muted">{{ sac_code|default:"998399" }}</td>
+                    <td class="text-end fw-bold">₹{{ platform_fee|floatformat:2 }}</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div class="row justify-content-end">
+            <div class="col-sm-6 col-md-5">
+                <div class="d-flex justify-content-between align-items-center border-top pt-3">
+                    <strong class="fs-5">Invoice Total</strong>
+                    <strong class="fs-4 text-dark">₹{{ grand_total|floatformat:2 }}</strong>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="mt-5 pt-4 border-top text-center text-muted small">
+            <p class="mb-1 fw-bold text-dark">Thank you for using FASTX!</p>
+            <p class="mb-0">This is a computer generated document and requires no physical signature.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

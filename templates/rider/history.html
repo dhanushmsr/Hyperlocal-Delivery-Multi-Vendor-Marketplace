@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+
+{% block title %}Delivery History | FASTX Rider{% endblock %}
+
+{% block content %}
+<div class="container py-4 mb-5" style="max-width: 800px;">
+    
+    <div class="d-flex align-items-center mb-4 gap-3">
+        <a href="{% url 'rider_dashboard' %}" class="btn btn-outline-secondary rounded-circle shadow-sm" style="width: 40px; height: 40px; padding: 7px;">
+            <i class="bi bi-arrow-left fs-5"></i>
+        </a>
+        <h4 class="fw-bold mb-0 text-navy">Delivery History</h4>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100 bg-light">
+                <h6 class="text-muted fw-bold text-uppercase small" style="font-size: 0.7rem;">Successful Deliveries</h6>
+                <h3 class="fw-bold text-dark mb-0">{{ total_orders }}</h3>
+            </div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100 bg-light border-primary border-start border-3">
+                <h6 class="text-muted fw-bold text-uppercase small" style="font-size: 0.7rem;">Total Earnings</h6>
+                <h3 class="fw-bold text-primary mb-0">₹{{ total_earnings }}</h3>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100 text-white" style="background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);">
+                <h6 class="text-white opacity-75 fw-bold text-uppercase small" style="font-size: 0.7rem;">Payout Pending</h6>
+                <h3 class="fw-bold mb-1 text-warning" id="payout-amount-display">₹{{ payout_pending }}</h3>
+                
+                {% if payout_pending > 0 %}
+                    <button id="verify-payout-btn" onclick="verifyRiderPayout()" class="btn btn-sm btn-outline-warning rounded-pill py-1 px-3 mt-1 no-print fw-bold" style="font-size:0.75rem;">
+                        <i class="bi bi-shield-check"></i> Verify Received
+                    </button>
+                {% else %}
+                    <span class="badge bg-success mt-1" style="font-size:0.75rem;"><i class="bi bi-check-all"></i> Settled & Verified</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="accordion" id="historyAccordion">
+        {% for order in history %}
+            
+            {% ifchanged order.created_at|date:"F d, Y" %}
+                <div class="mt-4 mb-3 ps-2">
+                    <span class="badge bg-secondary bg-opacity-10 text-secondary border rounded-pill px-3 py-2 fw-bold shadow-sm">
+                        <i class="bi bi-calendar3 me-1"></i> {{ order.created_at|date:"F d, Y" }}
+                    </span>
+                </div>
+            {% endifchanged %}
+
+            <div class="card border-0 shadow-sm rounded-4 mb-3 overflow-hidden border-start border-4 {% if order.status == 'Delivered' %}border-success{% else %}border-danger{% endif %}">
+                
+                <div class="card-body d-flex justify-content-between align-items-center bg-white" 
+                     data-bs-toggle="collapse" 
+                     data-bs-target="#orderDetail{{ order.id }}" 
+                     aria-expanded="false" 
+                     style="cursor: pointer;">
+                    
+                    <div>
+                        <h6 class="fw-bold mb-1 text-dark">#{{ order.order_id }}</h6>
+                        <small class="text-muted"><i class="bi bi-clock me-1"></i> {{ order.created_at|date:"h:i A" }}</small>
+                        
+                        <div class="mt-2">
+                            {% if order.status == 'Delivered' %}
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25"><i class="bi bi-check-circle me-1"></i>Delivered</span>
+                            {% elif order.status == 'Not_Reachable' %}
+                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25"><i class="bi bi-x-circle me-1"></i>Failed to Deliver</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="text-end">
+                        {% if order.status == 'Delivered' %}
+                            <span class="d-block fw-bold text-success fs-5">₹{{ order.delivery_fee|default:"0.00" }}</span>
+                            
+                            {% if order.rider_rating > 0 %}
+                                <span class="text-warning small d-block mb-1">
+                                    {% for i in "12345"|slice:order.rider_rating %}★{% endfor %}
+                                </span>
+                            {% else %}
+                                <small class="text-muted d-block mb-1 fst-italic" style="font-size:0.65rem;">No rating yet</small>
+                            {% endif %}
+                            
+                        {% else %}
+                            <span class="d-block fw-bold text-muted fs-5 text-decoration-line-through">₹{{ order.delivery_fee|default:"0.00" }}</span>
+                            <small class="text-danger d-block mb-1" style="font-size:0.65rem;">Unpaid</small>
+                        {% endif %}
+                        
+                        <small class="text-primary fw-bold" style="font-size: 0.7rem;">Details <i class="bi bi-chevron-down"></i></small>
+                    </div>
+                </div>
+
+                <div id="orderDetail{{ order.id }}" class="collapse border-top" data-bs-parent="#historyAccordion">
+                    <div class="card-body bg-light small">
+                        <div class="row g-2">
+                            <div class="col-12 border-bottom pb-2 mb-2">
+                                <span class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.65rem;">Pickup From</span>
+                                <span class="fw-bold text-dark"><i class="bi bi-shop text-primary me-2"></i>{{ order.vendor.business_name|default:"FASTX Vendor" }}</span>
+                            </div>
+                            
+                            <div class="col-6">
+                                <span class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.65rem;">Distance</span>
+                                <span class="fw-bold text-dark"><i class="bi bi-geo-alt-fill text-danger me-1"></i> {{ order.distance_km|default:"0" }} km</span>
+                            </div>
+                            
+                            <div class="col-6">
+                                <span class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.65rem;">Time Taken</span>
+                                <span class="fw-bold text-dark"><i class="bi bi-clock-fill text-warning me-1"></i> {{ order.duration_minutes|default:"0" }} mins</span>
+                            </div>
+
+                            <div class="col-6 mt-3">
+                                <span class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.65rem;">Customer Bill</span>
+                                <span class="fw-bold text-dark">₹{{ order.total_amount }}</span>
+                            </div>
+
+                            <div class="col-6 mt-3">
+                                <span class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.65rem;">Payment Type</span>
+                                {% if order.payment_method == 'cod' %}
+                                    <span class="badge bg-danger">Collect Cash</span>
+                                {% else %}
+                                    <span class="badge bg-success">Paid Online</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        {% empty %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-inboxes fs-1 d-block mb-2 opacity-50"></i>
+            <h6>No deliveries completed yet.</h6>
+            <p class="small">Your past deliveries will show up here.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+
+<script>
+    // ASYNC PAYOUT CLEARING VERIFICATION FUNCTION FOR RIDER
+    function verifyRiderPayout() {
+        if(confirm("Confirm that you have securely verified this payout balance from the FASTX administration?")) {
+            fetch("/rider-api/verify-payout/", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    document.getElementById('payout-amount-display').innerText = "₹0.00";
+                    const btn = document.getElementById('verify-payout-btn');
+                    if(btn) {
+                        btn.outerHTML = '<span class="badge bg-success mt-1" style="font-size:0.75rem;"><i class="bi bi-check-all"></i> Settled & Verified</span>';
+                    }
+                } else {
+                    alert("Error verifying payout.");
+                }
+            })
+            .catch(err => { console.error("Error:", err); });
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}Privacy Policy | FASTX{% endblock %}
+
+{% block content %}
+<div class="container py-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="text-center mb-5">
+                <h1 class="fw-bold text-navy">Privacy Policy</h1>
+                <p class="text-muted">Last Updated: June 30, 2026</p>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 bg-white lh-lg mb-5">
+                <p class="text-muted small">At <strong>FASTX</strong> (operated by OXRO Private Ltd), securing your personal data is our top priority. This policy outlines how we collect, store, and utilize data across our ecosystem.</p>
+
+                <h4 class="fw-bold text-navy border-bottom pb-2 mb-4 mt-5">1. Customer Privacy</h4>
+                <ul class="text-muted small mb-4">
+                    <li class="mb-2"><strong>Location Data:</strong> We require precise GPS coordinates (Latitude/Longitude) to accurately route your order to the nearest hub and provide accurate delivery tracking. This data is only actively polled while the app is in use.</li>
+                    <li class="mb-2"><strong>Communication:</strong> Your phone number is masked where possible, but shared securely with Twilio for SMS/OTP verification, and temporarily with your assigned Rider to facilitate order drop-offs.</li>
+                    <li class="mb-2"><strong>Financial Data:</strong> We do not store full credit card numbers. All FASTX Wallet transactions and online payments are encrypted and processed by PCI-compliant banking partners.</li>
+                </ul>
+
+                <h4 class="fw-bold text-orange border-bottom pb-2 mb-4 mt-5">2. Seller (Vendor) Privacy</h4>
+                <ul class="text-muted small mb-4">
+                    <li class="mb-2"><strong>Business Data:</strong> We collect and store your Business Name, GST Number, FSSAI License, and Store Address to generate legally compliant tax invoices for your customers.</li>
+                    <li class="mb-2"><strong>Financial Ledgers:</strong> Your sales data, platform fee deductions, and settlement history are logged securely on our internal servers to ensure accurate and transparent payouts.</li>
+                </ul>
+
+                <h4 class="fw-bold text-success border-bottom pb-2 mb-4 mt-5">3. Rider (Delivery Partner) Privacy</h4>
+                <ul class="text-muted small mb-4">
+                    <li class="mb-2"><strong>Live Tracking:</strong> To provide customers with live order tracking, we continuously collect and broadcast your GPS location <em>only</em> while you have an active delivery trip assigned to you.</li>
+                    <li class="mb-2"><strong>Identity Verification:</strong> We securely store copies of your driver's license and vehicle registration solely for background verification and platform safety compliance.</li>
+                </ul>
+
+                <h4 class="fw-bold text-navy border-bottom pb-2 mb-4 mt-5">4. Data Deletion & The "Right to be Forgotten"</h4>
+                <p class="text-muted small">FASTX empowers all users (Customers, Sellers, and Riders) with complete control over their digital footprint. By navigating to Account Settings > Danger Zone, you may initiate a permanent account deletion. Upon passing a secure SMS OTP verification, your profile, order history, and saved credentials will be permanently erased from our active databases.</p>
+
+                <h4 class="fw-bold text-navy border-bottom pb-2 mb-4 mt-5">5. Third-Party Sharing</h4>
+                <p class="text-muted small">We do not sell your data. Information is strictly shared with necessary functional partners, including OpenStreetMap (for reverse geocoding addresses) and Twilio (for SMS gateway delivery).</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sticky Acceptance Footer -->
+<div class="fixed-bottom bg-white border-top shadow-lg p-3" style="z-index: 1050;">
+    <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center">
+        <div class="form-check mb-3 mb-md-0">
+            <input class="form-check-input border-dark" type="checkbox" id="acceptPrivacyCheck" onchange="toggleAcceptButton('acceptPrivacyBtn', this)">
+            <label class="form-check-label fw-bold text-dark small" for="acceptPrivacyCheck">
+                I have read, understood, and agree to the FASTX Privacy Policy.
+            </label>
+        </div>
+        <button class="btn btn-dark rounded-pill px-5 fw-bold shadow-sm" id="acceptPrivacyBtn" disabled onclick="window.history.back()">
+            Accept & Continue
+        </button>
+    </div>
+</div>
+
+<script>
+    function toggleAcceptButton(btnId, checkbox) {
+        document.getElementById(btnId).disabled = !checkbox.checked;
+    }
+</script>
+{% endblock %}

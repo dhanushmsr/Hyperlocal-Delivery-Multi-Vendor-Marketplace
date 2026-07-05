@@ -1,0 +1,384 @@
+{% extends 'base.html' %}
+
+{% block title %}Rider Dashboard | FASTX{% endblock %}
+
+{% block content %}
+<style>
+    /* Flashing animation to grab rider's attention */
+    @keyframes pulse {
+        0% { background-color: #ffc107; }
+        50% { background-color: #ffda6a; }
+        100% { background-color: #ffc107; }
+    }
+    .animation-pulse {
+        animation: pulse 1s infinite;
+    }
+    
+    /* Toggle Switch Styling */
+    .rider-toggle { transform: scale(1.5); margin-right: 10px; cursor: pointer; }
+    .status-text { font-size: 1.1rem; font-weight: 700; transition: color 0.3s; }
+    .status-online { color: #198754; }
+    .status-offline { color: #6c757d; }
+</style>
+
+<!-- SOUND & NOTIFICATION ENABLE BANNER -->
+<div id="notificationEnableBanner" class="alert alert-primary text-center fw-bold rounded-0 mb-0 shadow-sm" style="display:none; cursor:pointer; z-index: 1050; border-bottom: 3px solid #0d6efd;" onclick="enableNotifications()">
+    <i class="bi bi-bell-fill me-2 fs-5 text-primary"></i> 
+    <span class="text-dark">Click here to enable Background Notifications & Sound Alerts for new deliveries!</span>
+</div>
+
+<div class="container py-4 mb-5" style="max-width: 800px;">
+    
+    <!-- HEADER & STATUS TOGGLE -->
+    <div class="d-flex justify-content-between align-items-center mb-4 bg-white p-3 rounded-4 shadow-sm border mt-3">
+        <div class="d-flex align-items-center">
+            <div class="form-check form-switch mb-0">
+                <input class="form-check-input rider-toggle" type="checkbox" role="switch" id="dutyToggle" onchange="toggleDutyStatus()" {% if rider.is_online %}checked{% endif %}>
+            </div>
+            <span id="dutyStatusText" class="status-text {% if rider.is_online %}status-online{% else %}status-offline{% endif %}">
+                {% if rider.is_online %}I am Active (Online){% else %}Offline (Not taking orders){% endif %}
+            </span>
+        </div>
+        <a href="{% url 'rider_history' %}" class="btn btn-sm btn-outline-primary rounded-pill px-3 shadow-sm fw-bold">
+            <i class="bi bi-clock-history me-1"></i> History
+        </a>
+    </div>
+    
+    <!-- RIDER PROFILE CARD -->
+    <div class="card border-0 shadow-sm rounded-4 text-white p-4 mb-4" style="background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                {% if rider.profile_photo %}
+                    <img src="{{ rider.profile_photo.url }}" class="rounded-circle border border-2 border-white me-3 shadow" style="width: 60px; height: 60px; object-fit: cover;">
+                {% else %}
+                    <div class="bg-light text-dark rounded-circle d-flex align-items-center justify-content-center fw-bold fs-4 me-3 shadow-sm" style="width: 60px; height: 60px;">
+                        {{ request.user.first_name|slice:":1" }}
+                    </div>
+                {% endif %}
+                <div>
+                    <h5 class="fw-bold mb-0">Hi, {{ request.user.first_name }}!</h5>
+                    <p class="text-white opacity-75 small mb-0"><i class="bi bi-scooter me-1"></i> {{ rider.vehicle_type }} Partner</p>
+                </div>
+            </div>
+            <div class="text-end">
+                <h3 class="fw-bold text-warning mb-0">{{ completed_count }}</h3>
+                <small class="text-white opacity-75 text-uppercase" style="font-size: 0.65rem;">Lifetime Deliveries</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN ASSIGNMENTS AREA -->
+    {% if not rider.is_online and not active_deliveries %}
+        <div class="card border-0 shadow-sm rounded-4 p-5 text-center bg-light mt-4">
+            <i class="bi bi-moon-stars fs-1 text-muted opacity-50 mb-3 d-block"></i>
+            <h5 class="fw-bold text-dark">You are currently offline.</h5>
+            <p class="text-muted small">Toggle the switch at the top to "I am Active" to start receiving delivery assignments and viewing pool orders.</p>
+        </div>
+    {% else %}
+    
+        <h5 class="fw-bold mb-3"><i class="bi bi-box-seam text-primary me-2"></i>Active Assignments</h5>
+
+        {% for order in active_deliveries %}
+            
+            {% if order.assignment_status|lower == 'pending' %}
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden mb-4 border-start border-4 border-warning order-row" data-pending="true" data-id="{{ order.id }}">
+                <div class="text-dark px-4 py-3 fw-bold d-flex justify-content-between align-items-center animation-pulse">
+                    <span class="fs-5"><i class="bi bi-bell-fill me-2"></i>New Assignment!</span>
+                    <span class="badge bg-dark fs-6 shadow-sm"><i class="bi bi-hourglass-split"></i> Awaiting</span>
+                </div>
+                
+                <div class="card-body p-4 bg-white">
+                    <h5 class="fw-bold mb-3 border-bottom pb-2">Order #{{ order.order_id }}</h5>
+                    <p class="mb-2"><i class="bi bi-shop text-primary me-2"></i> <strong>Pickup:</strong> {{ order.vendor.business_name }}</p>
+                    <p class="mb-2 text-muted small"><i class="bi bi-geo-alt me-2"></i> {{ order.vendor.address }}</p>
+                    <p class="mb-3 mt-3"><i class="bi bi-geo-alt-fill text-danger me-2"></i> <strong>Drop:</strong> {{ order.delivery_address|default:"Customer Address"|truncatechars:40 }}</p>
+                    
+                    <h4 class="text-success fw-bold text-center bg-light py-2 rounded-3 mt-4">Earn ₹{{ order.delivery_fee }}</h4>
+                    
+                    <div class="d-flex gap-2 mt-4">
+                        <button onclick="respondToAssignment('{{ order.id }}', 'Accepted')" class="btn btn-success flex-grow-1 rounded-pill fw-bold py-3 shadow-sm">
+                            <i class="bi bi-check-circle-fill me-1 fs-5"></i> Accept
+                        </button>
+                        <button onclick="respondToAssignment('{{ order.id }}', 'Rejected')" class="btn btn-danger flex-grow-1 rounded-pill fw-bold py-3 shadow-sm">
+                            <i class="bi bi-x-circle-fill me-1 fs-5"></i> Reject
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {% elif order.assignment_status|lower == 'accepted' %}
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4 border-start border-4 {% if order.status == 'Out_for_Delivery' %}border-warning{% else %}border-info{% endif %} order-row" data-id="{{ order.id }}">
+                
+                <!-- DYNAMIC MAP -->
+                <div class="w-100 bg-light border-bottom" style="height: 200px;">
+                    <iframe width="100%" height="100%" frameborder="0" style="border:0" 
+                        src="https://maps.google.com/maps?q={% if order.status == 'Packed' %}{{ order.vendor.address|urlencode }}{% else %}{{ order.delivery_address|default:order.user.customer_profile.address|default:'Bengaluru, Karnataka'|urlencode }}{% endif %}&t=&z=15&ie=UTF8&iwloc=&output=embed" allowfullscreen>
+                    </iframe>
+                </div>
+
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3 border-bottom pb-3">
+                        <div>
+                            <span class="badge bg-dark mb-2">Order #{{ order.order_id }}</span>
+                            <h5 class="fw-bold mb-1">Customer: {{ order.user.first_name }} {{ order.user.last_name }}</h5>
+                            
+                            <div class="mt-2 d-flex align-items-center flex-wrap gap-2">
+                                <span class="fs-5 fw-bold text-navy">₹{{ order.total_amount|floatformat:2 }}</span>
+                                {% if order.payment_method == 'cod' %}
+                                    <span class="badge bg-danger shadow-sm py-2"><i class="bi bi-cash-coin me-1"></i> Collect Cash</span>
+                                {% else %}
+                                    <span class="badge bg-success shadow-sm py-2"><i class="bi bi-check-circle-fill me-1"></i> Paid Online</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge {% if order.status == 'Out_for_Delivery' %}bg-warning text-dark{% else %}bg-info text-dark{% endif %} px-3 py-2 rounded-pill shadow-sm">
+                                {{ order.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- SELLER & CUSTOMER LOCATIONS -->
+                    <div class="row mb-4 bg-light p-3 rounded-3 mx-0 border">
+                        <div class="col-12 mb-3 border-bottom pb-2">
+                            <small class="text-primary d-block text-uppercase fw-bold" style="font-size: 0.7rem;"><i class="bi bi-shop me-1"></i> 1. Pickup From Seller</small>
+                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                <div>
+                                    <strong class="d-block text-dark">{{ order.vendor.business_name }}</strong>
+                                    <span class="small text-muted">{{ order.vendor.address|default:"Vendor Location" }}</span>
+                                </div>
+                                <div class="text-end">
+                                    <a href="https://www.google.com/maps/dir/?api=1&destination={{ order.vendor.address|urlencode }}" target="_blank" class="btn btn-sm btn-outline-primary rounded-circle shadow-sm me-1"><i class="bi bi-geo-alt-fill"></i></a>
+                                    <a href="tel:{{ order.vendor.phone_number }}" class="btn btn-sm btn-outline-success rounded-circle shadow-sm"><i class="bi bi-telephone-fill"></i></a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <small class="text-danger d-block text-uppercase fw-bold" style="font-size: 0.7rem;"><i class="bi bi-house-door me-1"></i> 2. Deliver To Customer</small>
+                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                <div>
+                                    <strong class="d-block text-dark">{{ order.user.first_name }}</strong>
+                                    <span class="small text-muted">{{ order.delivery_address|default:"Address not provided" }}</span>
+                                </div>
+                                <div class="text-end">
+                                    <a href="https://www.google.com/maps/dir/?api=1&destination={{ order.delivery_address|urlencode }}" target="_blank" class="btn btn-sm btn-outline-primary rounded-circle shadow-sm me-1"><i class="bi bi-geo-alt-fill"></i></a>
+                                    <a href="tel:{{ order.user.customer_profile.phone_number }}" class="btn btn-sm btn-outline-success rounded-circle shadow-sm"><i class="bi bi-telephone-fill"></i></a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ACTION BUTTONS -->
+                    <div class="w-100 d-flex gap-2 mt-2">
+                        {% if order.status == 'Packed' %}
+                            <button disabled class="btn btn-secondary rounded-pill px-4 fw-bold shadow-sm w-100 opacity-75">
+                                <i class="bi bi-hourglass-split me-1"></i> Proceed to Seller for Pickup
+                            </button>
+                        {% elif order.status == 'Dispatched' %}
+                            <button onclick="updateRiderStatus('{{ order.id }}', 'Out_for_Delivery')" class="btn btn-warning text-dark rounded-pill px-4 fw-bold shadow-sm w-100">
+                                <i class="bi bi-box-seam me-1"></i> Order Picked Up (Start Route)
+                            </button>
+                        {% elif order.status == 'Out_for_Delivery' %}
+                            <button onclick="updateRiderStatus('{{ order.id }}', 'Delivered')" class="btn btn-success rounded-pill px-3 fw-bold shadow-sm flex-grow-1">
+                                <i class="bi bi-check-circle-fill me-1"></i> Package Delivered
+                            </button>
+                            <button onclick="updateRiderStatus('{{ order.id }}', 'Not_Reachable')" class="btn btn-danger rounded-pill px-3 fw-bold shadow-sm flex-grow-1">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i> Not Reachable
+                            </button>
+                        {% endif %}
+                    </div>
+
+                </div>
+            </div>
+            {% endif %}
+
+        {% empty %}
+        <div class="card border-0 shadow-sm rounded-4 p-5 text-center bg-light">
+            <i class="bi bi-cup-hot fs-1 text-muted opacity-50 mb-3 d-block"></i>
+            <h5 class="fw-bold text-dark">No active deliveries.</h5>
+            <p class="text-muted small">Stay online! New assignment requests will pop up here instantly.</p>
+        </div>
+        {% endfor %}
+
+        <!-- OPEN POOL -->
+        {% if rider.is_online %}
+            <h5 class="fw-bold mt-5 mb-3 text-primary"><i class="bi bi-lightning-charge-fill me-1"></i>Open Pool (Unassigned)</h5>
+            {% for order in available_orders %}
+                <div class="card border-0 shadow-sm rounded-4 p-3 mb-3 border-start border-4 border-primary bg-white pool-row" data-id="pool-{{ order.id }}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="mb-0 fw-bold">Order #{{ order.order_id }} <span class="badge bg-success ms-2">Earn ₹{{ order.delivery_fee }}</span></p>
+                            <small class="text-muted d-block mt-1"><i class="bi bi-shop me-1"></i> {{ order.vendor.business_name }}</small>
+                            <small class="text-muted d-block"><i class="bi bi-geo-alt me-1"></i> Drop: {{ order.user.customer_profile.city|default:"Local Area" }}</small>
+                        </div>
+                        <form action="{% url 'accept_order' order.id %}" method="POST">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4 fw-bold shadow-sm">Accept</button>
+                        </form>
+                    </div>
+                </div>
+            {% empty %}
+                <p class="text-muted small text-center"><i class="bi bi-inboxes me-1"></i>No unassigned pool orders currently.</p>
+            {% endfor %}
+        {% endif %}
+        
+    {% endif %} <!-- End of is_online check -->
+</div>
+
+<!-- Audio for Assignment Ping -->
+<audio id="alertSound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+
+<script>
+    // --- 1. NOTIFICATION & AUDIO CONTEXT SETUP ---
+    document.addEventListener("DOMContentLoaded", function() {
+        const audio = document.getElementById("alertSound");
+        const banner = document.getElementById("notificationEnableBanner");
+        
+        // Show banner if permissions haven't been granted this session
+        if (!sessionStorage.getItem('fastx_rider_notifications_unlocked')) {
+            banner.style.display = 'block';
+        }
+
+        window.enableNotifications = function() {
+            // 1. Request Native Notification Permission
+            if (Notification.permission !== "granted") {
+                Notification.requestPermission();
+            }
+
+            // 2. Unlock Audio Context
+            audio.play().then(() => {
+                audio.pause(); 
+                audio.currentTime = 0; 
+                sessionStorage.setItem('fastx_rider_notifications_unlocked', 'true');
+                banner.style.display = 'none';
+            }).catch(err => console.log(err));
+        };
+
+        // Determine highest Order ID currently on the page
+        let currentHighestId = 0;
+        
+        // Check Active Deliveries
+        document.querySelectorAll('.order-row').forEach(row => {
+            let id = parseInt(row.getAttribute('data-id'));
+            if (id > currentHighestId) currentHighestId = id;
+        });
+
+        // Check Pool Orders
+        document.querySelectorAll('.pool-row').forEach(row => {
+            let idAttr = row.getAttribute('data-id');
+            if (idAttr) {
+                let id = parseInt(idAttr.replace('pool-', ''));
+                if (id > currentHighestId) currentHighestId = id;
+            }
+        });
+
+        // Compare with LocalStorage to detect new order after auto-reload
+        let storedHighestId = localStorage.getItem('fastx_rider_latest_order');
+        if (storedHighestId) {
+            storedHighestId = parseInt(storedHighestId);
+            if (currentHighestId > storedHighestId) {
+                
+                // IT'S A NEW ORDER! Fire Audio & Desktop Notification
+                if (sessionStorage.getItem('fastx_rider_notifications_unlocked')) {
+                    audio.play().catch(e => { banner.style.display = 'block'; });
+                    
+                    if (Notification.permission === "granted") {
+                        new Notification("FASTX Partner Alert!", {
+                            body: "You have a new delivery assignment available.",
+                            icon: "https://cdn-icons-png.flaticon.com/512/3063/3063822.png" // Generic scooter icon
+                        });
+                    }
+                }
+            }
+        }
+        
+        // Save the current highest ID for the next auto-reload check
+        if (currentHighestId > 0) {
+            localStorage.setItem('fastx_rider_latest_order', currentHighestId);
+        }
+    });
+
+    // --- 2. ONLINE/OFFLINE TOGGLE API CALL ---
+    function toggleDutyStatus() {
+        const toggleBtn = document.getElementById('dutyToggle');
+        const statusText = document.getElementById('dutyStatusText');
+        const isOnline = toggleBtn.checked;
+        
+        // Optimistic UI Update
+        if (isOnline) {
+            statusText.innerText = "I am Active (Online)";
+            statusText.classList.replace('status-offline', 'status-online');
+        } else {
+            statusText.innerText = "Offline (Not taking orders)";
+            statusText.classList.replace('status-online', 'status-offline');
+        }
+
+        fetch('/rider-api/toggle-online/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ is_online: isOnline })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(!data.success) {
+                alert("Failed to update status.");
+                toggleBtn.checked = !isOnline; // Revert UI if server fails
+            } else {
+                setTimeout(() => location.reload(), 500); 
+            }
+        })
+        .catch(err => {
+            alert("Network error.");
+            toggleBtn.checked = !isOnline; // Revert UI
+        });
+    }
+
+    // --- 3. AUTO PAGE REFRESH (Data Synchronization) ---
+    // Poll the server every 10 seconds ONLY if online
+    {% if rider.is_online %}
+    setInterval(function() {
+        if(!document.hidden) { location.reload(); }
+    }, 10000);
+    {% endif %}
+
+    // --- 4. ACCEPT/REJECT ASSIGNMENT ---
+    function respondToAssignment(orderId, action) {
+        fetch(`/rider-api/respond-assignment/${orderId}/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+            body: JSON.stringify({ action: action })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) location.reload(); 
+            else alert("Error: " + (data.error || "Unknown error occurred."));
+        })
+        .catch(error => { alert("A network error occurred."); });
+    }
+
+    // --- 5. UPDATE DELIVERY STATUS ---
+    function updateRiderStatus(orderId, newStatus) {
+        let confirmMsg = "Update order status?";
+        if (newStatus === 'Out_for_Delivery') confirmMsg = "Have you picked up the package from the seller?";
+        else if (newStatus === 'Delivered') confirmMsg = "Confirm package handed to customer?";
+        else if (newStatus === 'Not_Reachable') confirmMsg = "Mark customer as Not Reachable? The seller will be notified.";
+
+        if(!confirm(confirmMsg)) return;
+
+        fetch(`/rider-api/update-status/${orderId}/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+            body: JSON.stringify({ status: newStatus })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) location.reload(); 
+            else alert("Error updating status: " + (data.error || "Please try again."));
+        })
+        .catch(error => { alert("A network error occurred."); });
+    }
+</script>
+{% endblock %}

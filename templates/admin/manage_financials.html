@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+
+{% block title %}Financials & Payouts | FASTX Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-navy mb-1"><i class="bi bi-cash-coin text-success me-2"></i> Financials & Payouts</h2>
+            <p class="text-muted mb-0">Clear payouts and view settlement bills for Sellers and Riders.</p>
+        </div>
+        <button onclick="window.print()" class="btn btn-dark rounded-pill shadow-sm">
+            <i class="bi bi-printer me-2"></i> Export Ledger
+        </button>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 1. SELLER PAYOUTS TABLE                    -->
+    <!-- ========================================== -->
+    <h5 class="fw-bold mb-3 mt-4"><i class="bi bi-shop text-orange me-2"></i> Seller Settlements</h5>
+    <div class="card border-0 shadow-sm rounded-4 mb-5 overflow-hidden">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="py-3 ps-4">Seller Business</th>
+                            <th>Pending Orders</th>
+                            <th><i class="bi bi-cash me-1"></i> COD Total</th>
+                            <th><i class="bi bi-credit-card me-1"></i> Online Total</th>
+                            <th class="text-danger">Platform Fee (10%)</th>
+                            <th class="text-success">Net Payout Due</th>
+                            <th class="text-end pe-4">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for data in financial_data %}
+                        
+                        <!-- Main Summary Row -->
+                        <tr>
+                            <td class="ps-4 fw-bold text-dark">{{ data.seller_name }}</td>
+                            <td><span class="badge bg-secondary rounded-pill">{{ data.total_orders }} Orders</span></td>
+                            <td class="text-warning fw-bold">₹{{ data.cod_total|floatformat:2 }}</td>
+                            <td class="text-info fw-bold">₹{{ data.online_total|floatformat:2 }}</td>
+                            <td class="text-danger">-₹{{ data.commission|floatformat:2 }}</td>
+                            <td class="text-success fw-bold fs-5">₹{{ data.payout_due|floatformat:2 }}</td>
+                            <td class="text-end pe-4">
+                                <div class="d-flex justify-content-end gap-2">
+                                    <button class="btn btn-sm btn-outline-primary rounded-pill shadow-sm" type="button" data-bs-toggle="collapse" data-bs-target="#seller-bills-{{ data.seller_id }}">
+                                        View Bills <i class="bi bi-chevron-down ms-1"></i>
+                                    </button>
+                                    
+                                    <form method="POST" action="{% url 'clear_payouts' %}" class="m-0" onsubmit="return confirm('Confirm you have transferred ₹{{ data.payout_due|floatformat:2 }} to {{ data.seller_name|escapejs }}? This resets their ledger to zero.');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="target_type" value="vendor">
+                                        <input type="hidden" name="target_id" value="{{ data.seller_id }}">
+                                        <button type="submit" class="btn btn-sm btn-success rounded-pill fw-bold shadow-sm">
+                                            <i class="bi bi-check2-all me-1"></i> Mark Cleared
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        
+                        <!-- Hidden Collapsible Row (The Dropdown) -->
+                        <tr id="seller-bills-{{ data.seller_id }}" class="collapse bg-light">
+                            <td colspan="7" class="p-0 border-0">
+                                <div class="p-4 border-bottom shadow-inner">
+                                    <h6 class="fw-bold text-muted small text-uppercase mb-3">Orders awaiting payout for {{ data.seller_name }}</h6>
+                                    <div class="row g-3">
+                                        {% for order in data.orders %}
+                                        <div class="col-md-4 col-lg-3">
+                                            <div class="card border border-primary border-opacity-25 shadow-sm rounded-3">
+                                                <div class="card-body p-2 d-flex justify-content-between align-items-center bg-white rounded-3">
+                                                    <div>
+                                                        <strong class="d-block small text-dark">#FX-{{ order.id }}</strong>
+                                                        <span class="badge {% if order.payment_method == 'COD' %}bg-warning text-dark{% else %}bg-info{% endif %}" style="font-size: 0.6rem;">{{ order.payment_method }}</span>
+                                                    </div>
+                                                    <div class="text-end">
+                                                        <strong class="d-block text-success small">₹{{ order.subtotal|floatformat:2 }}</strong>
+                                                        <a href="{% url 'generate_invoice' order.id 'commission' %}" target="_blank" class="text-primary small text-decoration-none fw-bold"><i class="bi bi-receipt"></i> Bill</a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-5">
+                                <i class="bi bi-check2-all fs-1 d-block mb-2 text-success opacity-50"></i> 
+                                <h5 class="fw-bold">All Sellers are fully settled up!</h5>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 2. RIDER PAYOUTS TABLE                     -->
+    <!-- ========================================== -->
+    <h5 class="fw-bold mb-3"><i class="bi bi-scooter text-info me-2"></i> Rider Settlements</h5>
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="py-3 ps-4">Rider Name</th>
+                            <th>Unsettled Trips</th>
+                            <th class="text-success">Net Payout Due</th>
+                            <th class="text-end pe-4">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rider in rider_data %}
+                        
+                        <!-- Main Summary Row -->
+                        <tr>
+                            <td class="ps-4 fw-bold text-dark">{{ rider.rider_name }}</td>
+                            <td><span class="badge bg-secondary rounded-pill">{{ rider.total_trips }} Deliveries</span></td>
+                            <td class="text-success fw-bold fs-5">₹{{ rider.payout_due|floatformat:2 }}</td>
+                            <td class="text-end pe-4">
+                                <div class="d-flex justify-content-end gap-2">
+                                    <button class="btn btn-sm btn-outline-info rounded-pill shadow-sm" type="button" data-bs-toggle="collapse" data-bs-target="#rider-trips-{{ rider.rider_id }}">
+                                        View Trips <i class="bi bi-chevron-down ms-1"></i>
+                                    </button>
+                                    
+                                    <form method="POST" action="{% url 'clear_payouts' %}" class="m-0" onsubmit="return confirm('Confirm you have transferred ₹{{ rider.payout_due|floatformat:2 }} to {{ rider.rider_name|escapejs }}?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="target_type" value="rider">
+                                        <input type="hidden" name="target_id" value="{{ rider.rider_id }}">
+                                        <button type="submit" class="btn btn-sm btn-success rounded-pill fw-bold shadow-sm">
+                                            <i class="bi bi-check2-all me-1"></i> Mark Cleared
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        
+                        <!-- Hidden Collapsible Row (The Dropdown) -->
+                        <tr id="rider-trips-{{ rider.rider_id }}" class="collapse bg-light">
+                            <td colspan="4" class="p-0 border-0">
+                                <div class="p-4 border-bottom shadow-inner">
+                                    <h6 class="fw-bold text-muted small text-uppercase mb-3">Unpaid deliveries for {{ rider.rider_name }}</h6>
+                                    <div class="row g-3">
+                                        {% for order in rider.orders %}
+                                        <div class="col-md-4 col-lg-3">
+                                            <div class="card border border-info border-opacity-25 shadow-sm rounded-3">
+                                                <div class="card-body p-2 d-flex justify-content-between align-items-center bg-white rounded-3">
+                                                    <div>
+                                                        <strong class="d-block small text-dark">#FX-{{ order.id }}</strong>
+                                                        <span class="text-muted" style="font-size: 0.7rem;">{{ order.created_at|date:"M d, H:i" }}</span>
+                                                    </div>
+                                                    <div class="text-end">
+                                                        <strong class="d-block text-success small">+₹{{ order.delivery_fee|floatformat:2 }}</strong>
+                                                        <a href="{% url 'generate_invoice' order.id 'delivery' %}" target="_blank" class="text-info small text-decoration-none fw-bold"><i class="bi bi-receipt"></i> Bill</a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-5">
+                                <i class="bi bi-scooter fs-1 d-block mb-2 text-info opacity-50"></i> 
+                                <h5 class="fw-bold">All Riders are fully settled up!</h5>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+
+{% block title %}FASTX | Saved Addresses{% endblock %}
+
+{% block content %}
+<div class="container py-4 mb-5">
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-lg-3 mb-4">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                <div class="list-group list-group-flush">
+                    <a href="{% url 'settings_overview' %}" class="list-group-item list-group-item-action py-3 fw-medium">
+                        <i class="bi bi-person me-2"></i> Profile Details
+                    </a>
+                    <a href="{% url 'saved_addresses' %}" class="list-group-item list-group-item-action py-3 fw-bold active" style="background-color: var(--fastx-navy); color: white;">
+                        <i class="bi bi-geo-alt me-2"></i> Saved Addresses
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-9">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="fw-bold mb-0 text-dark">Manage Addresses</h4>
+                    <button class="btn btn-orange rounded-pill px-4 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#addAddressModal">
+                        <i class="bi bi-plus-lg me-1"></i> Add New
+                    </button>
+                </div>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-success rounded-3 small fw-bold py-2"><i class="bi bi-check-circle-fill me-2"></i>{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+
+                <div class="row g-3">
+                    {% for address in addresses %}
+                    <div class="col-md-6">
+                        <div class="p-4 border rounded-4 bg-light h-100 position-relative {% if address.is_default %}border-primary{% endif %}">
+                            {% if address.is_default %}
+                                <span class="position-absolute top-0 end-0 badge bg-primary m-3 rounded-pill shadow-sm">Default</span>
+                            {% endif %}
+                            
+                            <div class="d-flex align-items-center mb-2">
+                                {% if address.title == 'Home' %}<i class="bi bi-house-door-fill text-muted fs-4 me-2"></i>
+                                {% elif address.title == 'Work' %}<i class="bi bi-building text-muted fs-4 me-2"></i>
+                                {% else %}<i class="bi bi-geo-alt-fill text-muted fs-4 me-2"></i>{% endif %}
+                                <h6 class="fw-bold mb-0">{{ address.title }}</h6>
+                            </div>
+                            
+                            <p class="text-muted small mb-3 lh-sm">
+                                {{ address.flat_no }}<br>
+                                {{ address.street }}<br>
+                                {{ address.city }}, {{ address.pincode }}
+                            </p>
+                            
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-outline-dark rounded-pill px-3">Edit</button>
+                                <button class="btn btn-sm btn-outline-danger rounded-pill px-3">Remove</button>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-12 text-center py-5">
+                        <i class="bi bi-geo text-muted opacity-25" style="font-size: 4rem;"></i>
+                        <h5 class="text-muted mt-3">No addresses saved yet</h5>
+                        <p class="small text-muted">Add an address to checkout faster.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ADD ADDRESS MODAL -->
+<div class="modal fade" id="addAddressModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="fw-bold mb-0">Add Delivery Address</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                
+                <!-- NEW: GPS AUTO-FILL BUTTON -->
+                <div class="bg-light p-3 rounded-3 border mb-4 text-center">
+                    <button type="button" id="btn-modal-locate" class="btn btn-outline-primary rounded-pill px-4 fw-bold w-100">
+                        <i class="bi bi-crosshair me-1"></i> Auto-fill with GPS
+                    </button>
+                    <div id="modal-spinner" class="spinner-border spinner-border-sm text-primary mt-2 d-none" role="status"></div>
+                    <small id="modal-location-msg" class="text-muted d-block mt-2 fw-medium"></small>
+                </div>
+                
+                <form method="POST" action="{% url 'saved_addresses' %}">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Save As</label>
+                        <select name="title" class="form-select bg-light border-0 py-2">
+                            <option value="Home">Home</option>
+                            <option value="Work">Work</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase">House/Flat/Block No.</label>
+                        <input type="text" name="flat_no" id="modal_flat" class="form-control bg-light border-0 py-2" required placeholder="e.g. Flat 402, Block B">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Street / Area</label>
+                        <input type="text" name="street" id="modal_street" class="form-control bg-light border-0 py-2" required placeholder="e.g. Main Street, Marathahalli">
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase">City</label>
+                            <input type="text" name="city" id="modal_city" class="form-control bg-light border-0 py-2" required value="Bengaluru">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Pincode</label>
+                            <input type="text" name="pincode" id="modal_pincode" class="form-control bg-light border-0 py-2" required maxlength="6">
+                        </div>
+                    </div>
+
+                    <div class="form-check mb-4 mt-2">
+                        <input class="form-check-input" type="checkbox" name="is_default" id="defaultCheck" checked>
+                        <label class="form-check-label small text-dark fw-medium" for="defaultCheck">
+                            Make this my default delivery address
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn-dark w-100 rounded-pill py-2 fw-bold">Save Address</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    
+    // GPS Auto-fill Logic for the Modal
+    document.getElementById('btn-modal-locate').addEventListener('click', function() {
+        let spinner = document.getElementById('modal-spinner');
+        let msg = document.getElementById('modal-location-msg');
+        
+        let streetInput = document.getElementById('modal_street');
+        let pincodeInput = document.getElementById('modal_pincode');
+        let cityInput = document.getElementById('modal_city');
+
+        spinner.classList.remove('d-none');
+        msg.innerText = "Requesting GPS permissions...";
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    let lat = position.coords.latitude;
+                    let lon = position.coords.longitude;
+                    
+                    msg.innerText = "Fetching Address Data...";
+                    
+                    // Call Nominatim API for Reverse Geocoding
+                    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            spinner.classList.add('d-none');
+                            msg.innerHTML = '<span class="text-success"><i class="bi bi-check-circle-fill"></i> Location successfully mapped!</span>';
+                            
+                            // Auto-fill the form inputs
+                            if(data.address) {
+                                streetInput.value = data.display_name;
+                                
+                                if(data.address.postcode) {
+                                    pincodeInput.value = data.address.postcode;
+                                }
+                                
+                                if(data.address.city || data.address.state_district) {
+                                    cityInput.value = data.address.city || data.address.state_district;
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            spinner.classList.add('d-none');
+                            msg.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle"></i> Failed to fetch address details automatically.</span>';
+                        });
+                },
+                function(error) {
+                    spinner.classList.add('d-none');
+                    msg.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle"></i> Location permission denied by your browser.</span>';
+                }
+            );
+        } else {
+            alert("Geolocation is not supported by this browser.");
+        }
+    });
+});
+</script>
+{% endblock %}

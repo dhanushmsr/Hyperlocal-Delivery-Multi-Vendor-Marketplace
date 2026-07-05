@@ -1,0 +1,431 @@
+{% extends 'base.html' %}
+
+{% block title %}FASTX | Account Settings{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h2 class="fw-bold mb-4 text-navy"><i class="bi bi-gear-fill me-2 text-orange"></i>Account Settings</h2>
+    
+    <div class="row g-4">
+        <!-- SIDEBAR TABS -->
+        <div class="col-md-3">
+            <div class="nav flex-column nav-pills shadow-sm rounded-4 bg-white p-2" id="v-pills-tab" role="tablist">
+                <button class="nav-link active fw-bold text-start mb-1 rounded-pill px-3 py-2" data-bs-toggle="pill" data-bs-target="#profile">
+                    <i class="bi bi-person-circle me-2"></i> Profile
+                </button>
+                
+                <!-- NEW: BANKING TAB (ONLY FOR SELLERS & RIDERS) -->
+                {% if request.user.is_vendor or request.user.rider_profile %}
+                <button class="nav-link fw-bold text-start mb-1 rounded-pill px-3 py-2" data-bs-toggle="pill" data-bs-target="#banking">
+                    <i class="bi bi-bank me-2"></i> Payout Details
+                </button>
+                {% endif %}
+
+                <button class="nav-link fw-bold text-start mb-1 rounded-pill px-3 py-2" data-bs-toggle="pill" data-bs-target="#security">
+                    <i class="bi bi-shield-lock me-2"></i> Security
+                </button>
+                <button class="nav-link fw-bold text-start mb-1 rounded-pill px-3 py-2" data-bs-toggle="pill" data-bs-target="#support">
+                    <i class="bi bi-headset me-2"></i> Customer Support
+                </button>
+                <hr class="my-2 border-secondary opacity-25">
+                <button class="nav-link fw-bold text-start rounded-pill px-3 py-2 text-danger" data-bs-toggle="pill" data-bs-target="#delete-account">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i> Danger Zone
+                </button>
+            </div>
+        </div>
+
+        <div class="col-md-9">
+            <div class="tab-content p-4 bg-white shadow-sm rounded-4 border-0">
+                
+                <!-- PROFILE TAB -->
+                <div class="tab-pane fade show active" id="profile">
+                    <h5 class="fw-bold mb-4 border-bottom pb-2">Personal Information</h5>
+                    
+                    <form method="POST" action="{% url 'update_profile' %}" enctype="multipart/form-data" id="profileForm">
+                        {% csrf_token %}
+                        
+                        <div class="d-flex align-items-center mb-4">
+                            {% if request.user.is_vendor and request.user.vendor_profile.profile_photo %}
+                                <img src="{{ request.user.vendor_profile.profile_photo.url }}" alt="Profile Photo" class="rounded-circle object-fit-cover border shadow-sm me-3" style="width: 80px; height: 80px;">
+                            {% elif request.user.rider_profile and request.user.rider_profile.profile_photo %}
+                                <img src="{{ request.user.rider_profile.profile_photo.url }}" alt="Profile Photo" class="rounded-circle object-fit-cover border shadow-sm me-3" style="width: 80px; height: 80px;">
+                            {% elif request.user.customer_profile and request.user.customer_profile.profile_picture %}
+                                <img src="{{ request.user.customer_profile.profile_picture.url }}" alt="Profile Photo" class="rounded-circle object-fit-cover border shadow-sm me-3" style="width: 80px; height: 80px;">
+                            {% else %}
+                                <div class="bg-light rounded-circle d-flex align-items-center justify-content-center border shadow-sm me-3" style="width: 80px; height: 80px;">
+                                    <i class="bi bi-person text-secondary fs-1"></i>
+                                </div>
+                            {% endif %}
+                            <div>
+                                <label class="form-label fw-medium small mb-1">Update Profile Photo</label>
+                                <input type="file" name="profile_photo" class="form-control form-control-sm w-auto" accept="image/*">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small fw-bold">First Name</label>
+                                <input type="text" name="first_name" class="form-control rounded-pill bg-light" value="{{ user.first_name }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small fw-bold">Last Name</label>
+                                <input type="text" name="last_name" class="form-control rounded-pill bg-light" value="{{ user.last_name }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small fw-bold">Email Address</label>
+                                <input type="email" name="email" class="form-control rounded-pill bg-light" value="{{ user.email }}" required>
+                            </div>
+                            
+                            <!-- SECURE PHONE NUMBER UPDATE -->
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small fw-bold">Phone Number</label>
+                                <div class="input-group shadow-sm rounded-pill overflow-hidden bg-light border">
+                                    <input type="tel" id="profile_phone" name="phone" class="form-control bg-transparent border-0" 
+                                           value="{% if request.user.is_vendor %}{{ request.user.vendor_profile.phone_number }}{% elif request.user.rider_profile %}{{ request.user.rider_profile.phone_number }}{% else %}{{ request.user.customer_profile.phone_number }}{% endif %}" 
+                                           required pattern="[0-9]{10}" maxlength="10" oninput="checkPhoneChange()">
+                                    <button type="button" class="btn btn-dark fw-bold px-3 d-none" id="btn-profile-otp" onclick="requestOTP('profile')">Verify New</button>
+                                </div>
+                            </div>
+                            
+                            <div class="col-12 mt-2 d-none" id="profile-otp-block">
+                                <div class="input-group shadow-sm rounded-pill overflow-hidden border border-primary">
+                                    <input type="text" id="profile_otp_input" class="form-control border-0 text-center fw-bold letter-spacing-2 py-2" placeholder="Enter 6-Digit OTP" maxlength="6">
+                                    <button type="button" class="btn btn-success fw-bold px-4" id="btn-verify-profile-otp" onclick="verifyOTP('profile')">Submit OTP</button>
+                                </div>
+                                <small class="text-muted d-block text-center mt-1">OTP sent to your new mobile number.</small>
+                            </div>
+                        </div>
+                        
+                        <div class="text-end">
+                            <button type="submit" id="btn-save-profile" class="btn btn-dark rounded-pill px-4 fw-bold">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- NEW: BANKING & PAYOUT TAB -->
+                {% if request.user.is_vendor or request.user.rider_profile %}
+                <div class="tab-pane fade" id="banking">
+                    <h5 class="fw-bold mb-4 border-bottom pb-2">Banking & Payout Details</h5>
+                    
+                    <form method="POST" action="{% url 'update_profile' %}" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small fw-bold">Name on Bank Account</label>
+                                <input type="text" name="bank_account_name" class="form-control rounded-pill bg-light" 
+                                    value="{% if request.user.is_vendor %}{{ request.user.vendor_profile.bank_account_name|default:'' }}{% else %}{{ request.user.rider_profile.bank_account_name|default:'' }}{% endif %}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small fw-bold">Bank Name</label>
+                                <input type="text" name="bank_name" class="form-control rounded-pill bg-light" 
+                                    value="{% if request.user.is_vendor %}{{ request.user.vendor_profile.bank_name|default:'' }}{% else %}{{ request.user.rider_profile.bank_name|default:'' }}{% endif %}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small fw-bold">Account Number</label>
+                                <input type="text" name="account_number" class="form-control rounded-pill bg-light" 
+                                    value="{% if request.user.is_vendor %}{{ request.user.vendor_profile.account_number|default:'' }}{% else %}{{ request.user.rider_profile.bank_account_number|default:'' }}{% endif %}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small fw-bold">IFSC Code</label>
+                                <input type="text" name="ifsc_code" class="form-control rounded-pill bg-light" 
+                                    value="{% if request.user.is_vendor %}{{ request.user.vendor_profile.ifsc_code|default:'' }}{% else %}{{ request.user.rider_profile.ifsc_code|default:'' }}{% endif %}" required>
+                            </div>
+                        </div>
+
+                        <div class="card border border-info border-opacity-25 bg-light p-3 rounded-4 mb-4 shadow-sm">
+                            <label class="form-label text-muted small fw-bold mb-2">Update Passbook / Cancelled Cheque</label>
+                            <input type="file" name="passbook_photo" class="form-control shadow-none" accept="image/*">
+                            <small class="text-muted mt-2 d-block"><i class="bi bi-info-circle me-1"></i>Only upload a new file if you want to replace your current verified document.</small>
+                        </div>
+
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-navy rounded-pill px-4 fw-bold">Securely Update Bank Details</button>
+                        </div>
+                    </form>
+                </div>
+                {% endif %}
+
+                <!-- SECURITY TAB -->
+                <div class="tab-pane fade" id="security">
+                    <h5 class="fw-bold mb-4 border-bottom pb-2">Security & Authentication</h5>
+                    
+                    <form method="POST" action="{% url 'change_password' %}" id="passwordForm">
+                        {% csrf_token %}
+                        <div id="password-error-alert" class="alert alert-danger d-none rounded-3 py-2 small fw-medium"></div>
+
+                        <!-- OTP VERIFICATION TO CHANGE PASSWORD -->
+                        <div class="mb-4 bg-light p-3 border rounded-4">
+                            <label class="form-label text-muted small fw-bold">Verify Identity (Registered Phone)</label>
+                            <div class="input-group shadow-sm rounded-pill overflow-hidden border bg-white mb-2">
+                                <span class="input-group-text bg-white border-0 text-muted"><i class="bi bi-shield-check"></i></span>
+                                <input type="tel" id="security_phone" class="form-control bg-transparent border-0" value="{% if request.user.is_vendor %}{{ request.user.vendor_profile.phone_number }}{% elif request.user.rider_profile %}{{ request.user.rider_profile.phone_number }}{% else %}{{ request.user.customer_profile.phone_number }}{% endif %}" readonly>
+                                <button type="button" class="btn btn-dark fw-bold px-3" id="btn-security-otp" onclick="requestOTP('security')">Get OTP</button>
+                            </div>
+                            
+                            <div class="d-none" id="security-otp-block">
+                                <div class="input-group shadow-sm rounded-pill overflow-hidden border border-primary">
+                                    <input type="text" id="security_otp_input" class="form-control border-0 text-center fw-bold letter-spacing-2" placeholder="Enter 6-Digit OTP" maxlength="6">
+                                    <button type="button" class="btn btn-success fw-bold px-4" id="btn-verify-security-otp" onclick="verifyOTP('security')">Verify</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PASSWORD FIELDS -->
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">Current Password</label>
+                            <input type="password" name="old_password" class="form-control rounded-pill bg-light" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">New Password</label>
+                            <input type="password" name="new_password1" id="new_password" class="form-control rounded-pill bg-light" required>
+                            <div class="form-text small opacity-75 ms-2">Must be at least 8 characters and contain 1 special character.</div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label text-muted small fw-bold">Confirm New Password</label>
+                            <input type="password" name="new_password2" id="confirm_password" class="form-control rounded-pill bg-light" required>
+                        </div>
+                        
+                        <button type="submit" id="btn-update-password" class="btn btn-danger rounded-pill px-4 fw-bold w-100 disabled" disabled><i class="bi bi-shield-lock-fill me-2"></i>Update Password</button>
+                    </form>
+                </div>
+
+                <!-- SUPPORT TAB -->
+                <div class="tab-pane fade" id="support">
+                    <h5 class="fw-bold mb-4 border-bottom pb-2">We're here to help</h5>
+                    <div class="row g-4 mt-2">
+                        <div class="col-md-6">
+                            <div class="card h-100 border-0 bg-light rounded-4 p-4 text-center">
+                                <i class="bi bi-chat-dots-fill text-orange display-4 mb-3"></i>
+                                <h6 class="fw-bold">Live Chat Support</h6>
+                                <p class="text-muted small">Chat with our agents instantly.</p>
+                                <button class="btn btn-outline-dark rounded-pill btn-sm mt-auto fw-bold">Start Chat</button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100 border-0 bg-light rounded-4 p-4 text-center">
+                                <i class="bi bi-telephone-fill text-primary display-4 mb-3"></i>
+                                <h6 class="fw-bold">Call Us</h6>
+                                <p class="text-muted small">Available 8 AM to 11 PM daily.</p>
+                                <a href="tel:+919344133010" class="btn btn-outline-primary rounded-pill btn-sm mt-auto fw-bold">+91 93441 33010</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DELETE ACCOUNT TAB -->
+                <div class="tab-pane fade" id="delete-account">
+                    <h5 class="fw-bold mb-3 text-danger border-bottom pb-2"><i class="bi bi-exclamation-triangle-fill me-2"></i>Delete Account</h5>
+                    <div class="alert alert-warning border-0 rounded-4 mb-4">
+                        <strong>Warning:</strong> Deleting your account is permanent. This action will erase your profile, wallet balance, order history, and saved addresses. It cannot be undone.
+                    </div>
+
+                    <div id="deletion-request-section">
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">Why are you leaving us? (Optional)</label>
+                            <select class="form-select rounded-pill bg-light" id="deletion-reason">
+                                <option value="">Select a reason...</option>
+                                <option value="not_using">I am not using this account anymore</option>
+                                <option value="privacy">Privacy concerns</option>
+                                <option value="service_quality">Dissatisfied with service/delivery</option>
+                                <option value="other">Other reason</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-danger rounded-pill fw-bold px-4" id="btn-request-delete" onclick="requestAccountDeletion()">
+                            Proceed to Delete Account
+                        </button>
+                        <div class="spinner-border spinner-border-sm text-danger d-none ms-2" id="delete-spinner" role="status"></div>
+                    </div>
+
+                    <div id="deletion-otp-section" class="d-none mt-4 p-4 bg-light border border-danger border-opacity-25 rounded-4 text-center">
+                        <i class="bi bi-chat-left-dots-fill text-danger display-4 mb-2 d-block"></i>
+                        <h6 class="fw-bold">Verify Account Deletion</h6>
+                        <p class="text-muted small mb-4">We have sent a 6-digit OTP via SMS to <strong id="deletion-target-display">your phone</strong>.</p>
+                        
+                        <input type="text" id="delete-otp-input" class="form-control form-control-lg rounded-pill text-center mb-3 mx-auto" placeholder="Enter 6-Digit OTP" maxlength="6" style="max-width: 250px; letter-spacing: 5px; font-weight: bold;">
+                        
+                        <div id="otp-error-msg" class="text-danger small fw-bold mb-3 d-none"></div>
+                        
+                        <button class="btn btn-danger rounded-pill fw-bold w-100 mb-2" onclick="confirmAccountDeletion()" style="max-width: 250px;">
+                            Permanently Delete Account
+                        </button>
+                        <button class="btn btn-link text-muted text-decoration-none small d-block mx-auto" onclick="cancelDeletion()">Cancel</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- OTP LOGIC FOR PHONE CHANGE AND PASSWORD CHANGE ---
+    let originalPhone = document.getElementById('profile_phone').value;
+    let isProfilePhoneVerified = false;
+    let isSecurityVerified = false;
+
+    // Detect if phone number changed
+    function checkPhoneChange() {
+        let currentInput = document.getElementById('profile_phone').value;
+        let btnOtp = document.getElementById('btn-profile-otp');
+        let saveBtn = document.getElementById('btn-save-profile');
+        
+        if (currentInput !== originalPhone && currentInput.length === 10) {
+            btnOtp.classList.remove('d-none');
+            saveBtn.disabled = true; // Lock save button until verified
+        } else {
+            btnOtp.classList.add('d-none');
+            document.getElementById('profile-otp-block').classList.add('d-none');
+            saveBtn.disabled = false;
+        }
+    }
+
+    // Unified OTP Requester
+    function requestOTP(context) {
+        let phoneInputId = context === 'profile' ? 'profile_phone' : 'security_phone';
+        let phone = document.getElementById(phoneInputId).value.trim();
+        let btn = document.getElementById(`btn-${context}-otp`);
+        
+        if(phone.length !== 10) { 
+            alert("Valid 10-digit mobile number required."); return; 
+        }
+        
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        btn.disabled = true;
+        
+        fetch('/api/send-otp/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+            body: JSON.stringify({phone: phone, action: 'account_update'})
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) {
+                document.getElementById(`${context}-otp-block`).classList.remove('d-none');
+                btn.innerHTML = 'Resend';
+                btn.classList.replace('btn-dark', 'btn-outline-secondary');
+                btn.disabled = false;
+                if(context === 'profile') document.getElementById('profile_phone').readOnly = true;
+            } else {
+                alert(data.error);
+                btn.innerHTML = 'Get OTP';
+                btn.disabled = false;
+            }
+        }).catch(err => { alert("Network error."); btn.innerHTML = 'Get OTP'; btn.disabled = false; });
+    }
+
+    // Unified OTP Verifier
+    function verifyOTP(context) {
+        let phoneInputId = context === 'profile' ? 'profile_phone' : 'security_phone';
+        let phone = document.getElementById(phoneInputId).value.trim();
+        let otp = document.getElementById(`${context}_otp_input`).value.trim();
+        let btn = document.getElementById(`btn-verify-${context}-otp`);
+        
+        if(otp.length !== 6) { alert("Please enter 6-digit OTP."); return; }
+
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        btn.disabled = true;
+        
+        fetch('/api/verify-otp/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+            body: JSON.stringify({phone: phone, otp: otp})
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) {
+                document.getElementById(`${context}-otp-block`).innerHTML = '<h6 class="text-success fw-bold p-2 mb-0"><i class="bi bi-check-circle-fill me-2"></i> Verified Successfully</h6>';
+                if(context === 'profile') {
+                    isProfilePhoneVerified = true;
+                    document.getElementById('btn-save-profile').disabled = false;
+                } else if(context === 'security') {
+                    isSecurityVerified = true;
+                    document.getElementById('btn-update-password').disabled = false;
+                    document.getElementById('btn-update-password').classList.remove('disabled');
+                }
+            } else {
+                alert(data.error);
+                btn.innerHTML = 'Verify';
+                btn.disabled = false;
+            }
+        }).catch(err => { alert("Network error."); btn.innerHTML = 'Verify'; btn.disabled = false; });
+    }
+
+    // --- PASSWORD VALIDATION PRE-SUBMISSION ---
+    document.getElementById('passwordForm').addEventListener('submit', function(event) {
+        let newPassword = document.getElementById('new_password').value;
+        let confirmPassword = document.getElementById('confirm_password').value;
+        let errorBox = document.getElementById('password-error-alert');
+        let specialCharFormat = /[!@#$%^&*(),.?":{}|<>]/;
+        let errorMessage = "";
+
+        if (!isSecurityVerified) {
+            errorMessage = "<i class='bi bi-exclamation-circle-fill me-2'></i> Please verify your identity with an OTP first.";
+        } else if (newPassword.length < 8) {
+            errorMessage = "<i class='bi bi-exclamation-circle-fill me-2'></i> Password must be at least 8 characters long.";
+        } else if (!specialCharFormat.test(newPassword)) {
+            errorMessage = "<i class='bi bi-exclamation-circle-fill me-2'></i> Password must contain at least one special character.";
+        } else if (newPassword !== confirmPassword) {
+            errorMessage = "<i class='bi bi-exclamation-circle-fill me-2'></i> Passwords do not match.";
+        }
+
+        if (errorMessage !== "") {
+            event.preventDefault();
+            errorBox.innerHTML = errorMessage;
+            errorBox.classList.remove('d-none');
+        } else {
+            errorBox.classList.add('d-none');
+        }
+    });
+
+    // --- ACCOUNT DELETION LOGIC (PRESERVED) ---
+    function requestAccountDeletion() {
+        const btn = document.getElementById('btn-request-delete');
+        const spinner = document.getElementById('delete-spinner');
+        const reason = document.getElementById('deletion-reason').value;
+
+        btn.disabled = true;
+        spinner.classList.remove('d-none');
+
+        fetch("{% url 'initiate_account_deletion' %}", {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+            body: JSON.stringify({ reason: reason })
+        }).then(response => response.json()).then(data => {
+            btn.disabled = false; spinner.classList.add('d-none');
+            if (data.status === 'success') {
+                document.getElementById('deletion-request-section').classList.add('d-none');
+                document.getElementById('deletion-otp-section').classList.remove('d-none');
+                if(data.phone) document.getElementById('deletion-target-display').innerText = data.phone;
+            } else alert(data.message);
+        }).catch(err => { btn.disabled = false; spinner.classList.add('d-none'); alert("Network error."); });
+    }
+
+    function confirmAccountDeletion() {
+        const otpInput = document.getElementById('delete-otp-input').value.trim();
+        const errorMsg = document.getElementById('otp-error-msg');
+
+        if (otpInput.length !== 6) { errorMsg.innerText = "Invalid OTP."; errorMsg.classList.remove('d-none'); return; }
+
+        fetch("{% url 'confirm_account_deletion' %}", {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+            body: JSON.stringify({ otp: otpInput })
+        }).then(response => response.json()).then(data => {
+            if (data.status === 'success') {
+                alert("Your account has been permanently deleted.");
+                window.location.href = "{% url 'welcome' %}";
+            } else {
+                errorMsg.innerText = data.message;
+                errorMsg.classList.remove('d-none');
+            }
+        }).catch(err => alert("Network error."));
+    }
+
+    function cancelDeletion() {
+        document.getElementById('deletion-otp-section').classList.add('d-none');
+        document.getElementById('deletion-request-section').classList.remove('d-none');
+        document.getElementById('delete-otp-input').value = '';
+        document.getElementById('otp-error-msg').classList.add('d-none');
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,288 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Manage Sellers | FASTX Admin{% endblock %}
+
+{% block content %}
+<style>
+    @media print {
+        body { background: white; padding: 0; }
+        .no-print { display: none !important; }
+        .fastx-navbar, .fastx-footer { display: none !important; }
+        .table { border: 1px solid #000; }
+        .table th, .table td { border: 1px solid #000; padding: 8px; }
+        .print-header { display: block !important; text-align: center; margin-bottom: 20px; }
+    }
+    .print-header { display: none; }
+    .table-hover tbody tr { cursor: pointer; transition: background-color 0.2s; }
+    .table-hover tbody tr:hover { background-color: rgba(10, 31, 68, 0.05); }
+    .offcanvas { width: 450px !important; }
+</style>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+        <h2 class="fw-bold text-navy"><i class="bi bi-shop text-orange me-2"></i>Seller Database</h2>
+        <button onclick="window.print()" class="btn btn-dark rounded-pill shadow-sm">
+            <i class="bi bi-printer me-2"></i> Export Data
+        </button>
+    </div>
+
+    <div id="actionAlert" class="alert alert-success d-none shadow-sm border-0" role="alert">
+        Action completed successfully.
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="py-3 ps-4">ID</th>
+                            <th>Business Name</th>
+                            <th>Owner Contact</th>
+                            <th>Onboarded</th>
+                            <th>Approval Status</th>
+                            <th class="text-end pe-4">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users_list %}
+                        <tr data-bs-toggle="offcanvas" data-bs-target="#sellerProfile{{ user.id }}">
+                            <td class="ps-4 fw-bold text-muted">#{{ user.id }}</td>
+                            <td>
+                                <strong class="text-dark fs-6">{{ user.vendor_profile.business_name|default:user.get_full_name }}</strong>
+                            </td>
+                            <td>
+                                <span class="d-block text-dark">{{ user.email }}</span>
+                            </td>
+                            <td>{{ user.date_joined|date:"M d, Y" }}</td>
+                            <td>
+                                {% if user.is_approved_vendor %}
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-3 py-1" id="approval-badge-table-{{ user.id }}">
+                                        <i class="bi bi-check-circle-fill me-1"></i> Approved
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning rounded-pill px-3 py-1" id="approval-badge-table-{{ user.id }}">
+                                        <i class="bi bi-hourglass-split me-1"></i> Pending Review
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end pe-4">
+                                <button class="btn btn-sm btn-light rounded-circle shadow-sm text-primary">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </td>
+                        </tr>
+
+                        <div class="offcanvas offcanvas-end shadow" tabindex="-1" id="sellerProfile{{ user.id }}" aria-labelledby="offcanvasRightLabel">
+                            <div class="offcanvas-header bg-light border-bottom">
+                                <h5 class="offcanvas-title fw-bold text-navy" id="offcanvasRightLabel">
+                                    <i class="bi bi-person-badge me-2"></i> Seller Profile
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                            </div>
+                            <div class="offcanvas-body">
+                                <div class="text-center mb-4 pt-3">
+                                    {% if user.vendor_profile.profile_photo %}
+                                        <img src="{{ user.vendor_profile.profile_photo.url }}" 
+                                             alt="{{ user.vendor_profile.business_name|default:'Vendor' }}" 
+                                             class="rounded-circle shadow-sm border border-2 border-white mb-3" 
+                                             style="width: 80px; height: 80px; object-fit: cover;">
+                                    {% else %}
+                                        <div class="bg-light text-dark border rounded-circle d-inline-flex align-items-center justify-content-center mb-3 shadow-sm" 
+                                             style="width: 80px; height: 80px; font-size: 2.5rem; font-weight: bold;">
+                                            {{ user.vendor_profile.business_name|default:user.first_name|slice:":1"|upper }}
+                                        </div>
+                                    {% endif %}
+
+                                    <h4 class="fw-bold mb-1">{{ user.vendor_profile.business_name|default:"No Business Name" }}</h4>
+                                    <p class="text-muted mb-2">Owner: {{ user.get_full_name }}</p>
+                                     
+                                    <div id="approval-status-text-{{ user.id }}">
+                                        {% if user.is_approved_vendor %}
+                                            <span class="badge bg-success px-3 py-2 rounded-pill"><i class="bi bi-shield-check me-1"></i> Verified Partner</span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark px-3 py-2 rounded-pill"><i class="bi bi-exclamation-circle me-1"></i> Awaiting Approval</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <hr class="border-secondary opacity-25">
+
+                                <div class="mb-4">
+                                    <h6 class="fw-bold text-uppercase text-muted small mb-3 tracking-wide">Contact Information</h6>
+                                    <div class="d-flex mb-3">
+                                        <i class="bi bi-envelope text-primary fs-5 me-3"></i>
+                                        <div>
+                                            <span class="d-block small text-muted">Email Address</span>
+                                            <span class="fw-medium">{{ user.email }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex mb-3">
+                                        <i class="bi bi-telephone text-primary fs-5 me-3"></i>
+                                        <div>
+                                            <span class="d-block small text-muted">Phone Number</span>
+                                            <span class="fw-medium">{{ user.vendor_profile.phone_number|default:"Not Provided" }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-4">
+                                    <h6 class="fw-bold text-uppercase text-muted small mb-3 tracking-wide">Business Details</h6>
+                                    <div class="d-flex mb-3">
+                                        <i class="bi bi-building text-primary fs-5 me-3"></i>
+                                        <div>
+                                            <span class="d-block small text-muted">GST Number</span>
+                                            <span class="fw-medium">{{ user.vendor_profile.gst_number|default:"Not Registered" }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex mb-3">
+                                        <i class="bi bi-geo-alt text-primary fs-5 me-3"></i>
+                                        <div>
+                                            <span class="d-block small text-muted">Store Address</span>
+                                            <span class="fw-medium">{{ user.vendor_profile.address|default:"No address provided" }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-4">
+                                    <h6 class="fw-bold text-uppercase text-muted small mb-3 tracking-wide">Bank Account Details</h6>
+                                    <div class="card bg-white border border-info border-opacity-25 p-3 shadow-sm rounded-4">
+                                        <div class="row g-3">
+                                            <div class="col-sm-12">
+                                                <span class="d-block small text-muted">Bank Name</span>
+                                                <span class="fw-medium text-dark">{{ user.vendor_profile.bank_name|default:"Not Provided" }}</span>
+                                            </div>
+                                            <div class="col-sm-12">
+                                                <span class="d-block small text-muted">Account Holder Name</span>
+                                                <span class="fw-medium text-dark">{{ user.vendor_profile.bank_account_name|default:"Not Provided" }}</span>
+                                            </div>
+                                            <div class="col-sm-12">
+                                                <span class="d-block small text-muted">Account Number</span>
+                                                <span class="fw-medium text-dark">{{ user.vendor_profile.account_number|default:"Not Provided" }}</span>
+                                            </div>
+                                            <div class="col-sm-12">
+                                                <span class="d-block small text-muted">IFSC Code</span>
+                                                <span class="fw-medium text-dark">{{ user.vendor_profile.ifsc_code|default:"Not Provided" }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="card bg-light border-0 p-3 shadow-sm rounded-4 mb-4">
+                                    <h6 class="fw-bold mb-3"><i class="bi bi-folder-check text-primary me-2"></i>Verification Documents</h6>
+                                    <div class="row g-2">
+                                        <div class="col-12">
+                                            {% if user.vendor_profile.aadhaar_card %}
+                                            <a href="{% url 'admin_view_doc' 'vendor_aadhar' user.id %}" target="_blank" class="btn btn-outline-dark w-100 rounded-pill text-start ps-3">
+                                                <i class="bi bi-file-earmark-person me-2"></i> View Govt ID Document
+                                            </a>
+                                            {% else %}
+                                            <button class="btn btn-outline-secondary w-100 rounded-pill text-start ps-3" disabled>
+                                                <i class="bi bi-file-earmark-x me-2"></i> No ID Uploaded
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-12">
+                                            {% if user.vendor_profile.passbook_photo %}
+                                            <a href="{% url 'admin_view_doc' 'vendor_passbook' user.id %}" target="_blank" class="btn btn-outline-dark w-100 rounded-pill text-start ps-3">
+                                                <i class="bi bi-bank me-2"></i> View Passbook / Cheque
+                                            </a>
+                                            {% else %}
+                                            <button class="btn btn-outline-secondary w-100 rounded-pill text-start ps-3" disabled>
+                                                <i class="bi bi-file-earmark-x me-2"></i> No Passbook Uploaded
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-auto pt-4 border-top">
+                                    <h6 class="fw-bold text-uppercase text-muted small mb-3 tracking-wide">Access Control</h6>
+                                     
+                                    <div class="d-grid mb-3">
+                                        {% if not user.is_approved_vendor %}
+                                            <button class="btn btn-success fw-bold py-2 shadow-sm" onclick="approveSeller('{{ user.id }}')" id="approve-btn-{{ user.id }}">
+                                                <i class="bi bi-check-circle me-2"></i> Approve Application
+                                            </button>
+                                        {% else %}
+                                            <button class="btn btn-outline-secondary fw-bold py-2" disabled id="approve-btn-{{ user.id }}">
+                                                <i class="bi bi-check-circle-fill me-2"></i> Application Approved
+                                            </button>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="card bg-light border-0 p-3">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <strong class="d-block text-dark">Platform Access</strong>
+                                                <small class="text-muted" id="status-label-{{ user.id }}">{% if user.is_active %}Active & Selling{% else %}Account Suspended{% endif %}</small>
+                                            </div>
+                                            <div class="form-check form-switch fs-4 mb-0">
+                                                <input class="form-check-input user-status-toggle" type="checkbox" role="switch" data-user-id="{{ user.id }}" id="switch-{{ user.id }}" style="cursor: pointer;" {% if user.is_active %}checked{% endif %}>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <tr><td colspan="6" class="text-center text-muted py-5"><i class="bi bi-shop fs-1 d-block mb-2 opacity-25"></i> No sellers found.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Platform Toggle (Suspension)
+    document.querySelectorAll('.user-status-toggle').forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const userId = this.getAttribute('data-user-id');
+            const isActive = this.checked;
+            const statusLabel = document.getElementById(`status-label-${userId}`);
+             
+            statusLabel.innerText = isActive ? 'Active & Selling' : 'Account Suspended';
+
+            fetch(`/admin-api/toggle-user/${userId}/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                body: JSON.stringify({ is_active: isActive })
+            }).then(r => r.json()).then(data => {
+                if(!data.success) {
+                    alert('Error: ' + data.error);
+                    this.checked = !isActive; 
+                    statusLabel.innerText = !isActive ? 'Active & Selling' : 'Account Suspended';
+                }
+            });
+        });
+    });
+
+    // Approval (Allowing them to use the dashboard)
+    function approveSeller(userId) {
+        if(!confirm("Are you sure you want to approve this seller? They will gain access to the Vendor Dashboard.")) return;
+
+        fetch(`/admin-api/approve-seller/${userId}/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) {
+                document.getElementById(`approve-btn-${userId}`).outerHTML = `<button class="btn btn-outline-secondary fw-bold py-2 w-100" disabled><i class="bi bi-check-circle-fill me-2"></i> Application Approved</button>`;
+                document.getElementById(`approval-status-text-${userId}`).innerHTML = `<span class="badge bg-success px-3 py-2 rounded-pill"><i class="bi bi-shield-check me-1"></i> Verified Partner</span>`;
+                document.getElementById(`approval-badge-table-${userId}`).outerHTML = `<span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-3 py-1" id="approval-badge-table-${userId}"><i class="bi bi-check-circle-fill me-1"></i> Approved</span>`;
+                 
+                const alertBox = document.getElementById('actionAlert');
+                alertBox.classList.remove('d-none');
+                alertBox.innerText = data.message;
+                setTimeout(() => alertBox.classList.add('d-none'), 3000);
+            } else {
+                alert("Failed to approve seller.");
+            }
+        });
+    }
+</script>
+{% endblock %}

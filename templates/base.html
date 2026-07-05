@@ -1,0 +1,656 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FASTX | {% block title %}Hyper Local Delivery{% endblock %}</title>
+    
+    <link rel="shortcut icon" href="{% static 'images/favicon.png' %}" type="image/x-icon">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <style>
+        :root {
+            --fastx-navy: #0A1F44;
+            --fastx-sky: #4FC3F7;
+            --fastx-orange: #FF6B00;
+            --grad-delivery: linear-gradient(135deg, #FF6B00, #FFA726);
+            --lite-grey: #F4F6F8;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FFFFFF;
+            padding-top: 76px;
+        }
+        h1, h2, h3, h4, .navbar-brand {
+            font-family: 'Poppins', sans-serif;
+        }
+        .fastx-navbar {
+            background-color: var(--fastx-navy);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .fastx-navbar .nav-link, .fastx-navbar .navbar-brand {
+            color: white !important;
+        }
+        .fastx-navbar .nav-link:hover {
+            color: var(--fastx-sky) !important;
+        }
+        .btn-orange {
+            background: var(--grad-delivery);
+            color: white;
+            border: none;
+            font-weight: 600;
+        }
+        .btn-orange:hover {
+            background: #E65C00;
+            color: white;
+        }
+        .cart-badge {
+            background-color: var(--fastx-orange);
+            color: white;
+            position: absolute;
+            top: 0;
+            right: -5px;
+            font-size: 0.65rem;
+        }
+        .fastx-footer {
+            background-color: var(--fastx-navy);
+            color: white;
+            padding: 40px 0 20px 0;
+            margin-top: 50px;
+        }
+        .fastx-footer a {
+            color: var(--fastx-sky);
+            text-decoration: none;
+        }
+        .fastx-footer a:hover {
+            color: white;
+        }
+        .cursor-pointer {
+            cursor: pointer;
+        }
+        .navbar-address-hover:hover {
+            opacity: 0.8;
+        }
+        .bg-lite-grey {
+            background-color: var(--lite-grey);
+        }
+
+        /* --- New Mobile App UI Styles --- */
+        .profile-img-nav {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--fastx-sky);
+        }
+
+        .mobile-bottom-nav {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background-color: #ffffff;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
+            z-index: 1040;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            padding-bottom: env(safe-area-inset-bottom, 15px);
+            border-top: 1px solid #e9ecef;
+        }
+
+        .mobile-bottom-nav a {
+            color: var(--fastx-navy);
+            text-decoration: none;
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .mobile-bottom-nav a i {
+            font-size: 1.4rem;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .mobile-bottom-nav a.active {
+            color: var(--fastx-orange);
+        }
+
+        /* Responsive Visibility Classes */
+        @media (max-width: 991.98px) {
+            .desktop-only { display: none !important; }
+            body { padding-bottom: 80px; } /* Prevent content from hiding behind bottom nav */
+        }
+        @media (min-width: 992px) {
+            .mobile-only { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg fastx-navbar fixed-top py-2">
+        <div class="container d-flex justify-content-between align-items-center">
+            
+            <a class="navbar-brand fs-3 fw-bold d-flex align-items-center m-0" href="{% url 'welcome' %}">
+                {% if request.user.is_vendor %}
+                    <img src="{% static 'images/seller_logo.png' %}" alt="FASTX Seller Logo" height="35" class="me-2 rounded-circle">
+                {% elif request.user.rider_profile %}
+                    <img src="{% static 'images/rider_logo.png' %}" alt="FASTX Rider Logo" height="35" class="me-2 rounded-circle">
+                {% else %}
+                    <img src="{% static 'images/logo1.png' %}" alt="FASTX Logo" height="35" class="me-2 rounded-circle">
+                {% endif %}
+                FAST<span style="color: var(--fastx-sky);">X</span>
+            </a>
+
+            {% if not request.user.is_superuser and not request.user.is_vendor and not request.user.rider_profile %}
+            <div class="mobile-only text-white text-end cursor-pointer navbar-address-hover" style="font-size: 0.75rem;" data-bs-toggle="modal" data-bs-target="#globalLocationModal">
+                <i class="bi bi-geo-alt-fill text-warning"></i><br>
+                <strong id="nav-address-display-mobile">
+                    {% if request.session.user_location %}
+                        {{ request.session.user_location.pincode }}
+                    {% else %}
+                        Select Location
+                    {% endif %}
+                </strong>
+            </div>
+            {% endif %}
+
+            <div class="desktop-only d-lg-flex flex-grow-1 align-items-center justify-content-between ms-4">
+                
+                {% if request.user.is_authenticated and not request.user.is_superuser and not request.user.is_vendor and not request.user.rider_profile %}
+                <form class="d-flex mx-auto w-50" method="GET" action="{% url 'customer_home' %}">
+                    <div class="input-group">
+                        <input class="form-control border-0" type="search" name="q" placeholder="Search for groceries, meat, electronics..." value="{{ request.GET.q|default:'' }}">
+                        <button class="btn btn-light text-dark" type="submit"><i class="bi bi-search"></i></button>
+                    </div>
+                </form>
+                {% else %}
+                <div class="mx-auto w-50"></div> 
+                {% endif %}
+
+                <ul class="navbar-nav align-items-center ms-auto">
+                    {% if request.user.is_authenticated and not request.user.is_superuser and not request.user.is_vendor and not request.user.rider_profile %}
+                        <li class="nav-item me-4 text-white cursor-pointer navbar-address-hover" style="font-size: 0.85rem;" data-bs-toggle="modal" data-bs-target="#globalLocationModal">
+                            <i class="bi bi-geo-alt-fill text-warning"></i> Delivering to <br> 
+                            <strong id="nav-address-display">
+                                {% if request.session.user_location %}{{ request.session.user_location.city }} {{ request.session.user_location.pincode }}{% else %}Select Location{% endif %} <i class="bi bi-chevron-down"></i>
+                            </strong>
+                        </li>
+
+                        <li class="nav-item me-4 position-relative">
+                            <a class="nav-link" href="{% url 'cart_checkout' %}">
+                                <i class="bi bi-cart3 fs-5"></i>
+                                <span class="ms-1">Cart <span class="text-warning fw-bold">(₹{{ grand_total|default:"0.00" }})</span></span>
+                                <span class="badge rounded-pill cart-badge" id="global-cart-count">{{ cart_count|default:"0" }}</span>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    {% if request.user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link cursor-pointer d-flex align-items-center" data-bs-toggle="offcanvas" data-bs-target="#profileOffcanvas" aria-controls="profileOffcanvas">
+                                {% if request.user.is_vendor and request.user.vendor_profile.profile_photo %}
+                                    <img src="{{ request.user.vendor_profile.profile_photo.url }}" alt="Profile" class="profile-img-nav">
+                                {% elif request.user.rider_profile and request.user.rider_profile.profile_photo %}
+                                    <img src="{{ request.user.rider_profile.profile_photo.url }}" alt="Profile" class="profile-img-nav">
+                                {% elif request.user.customer_profile and request.user.customer_profile.profile_picture %}
+                                    <img src="{{ request.user.customer_profile.profile_picture.url }}" alt="Profile" class="profile-img-nav">
+                                {% else %}
+                                    <i class="bi bi-person-circle fs-4"></i>
+                                {% endif %}
+                                <span class="ms-2 fw-medium">Profile</span>
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="btn btn-outline-light rounded-pill px-4 fw-bold ms-3" href="{% url 'unified_login' %}">Login</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="mobile-only container mt-3 mb-2">
+        {% if request.user.is_authenticated and not request.user.is_superuser and not request.user.is_vendor and not request.user.rider_profile %}
+        <form class="d-flex w-100" method="GET" action="{% url 'customer_home' %}">
+            <div class="input-group shadow-sm rounded-pill overflow-hidden border">
+                <input class="form-control border-0 px-4 py-2" type="search" name="q" placeholder="Search FASTX..." value="{{ request.GET.q|default:'' }}">
+                <button class="btn btn-warning px-3" type="submit"><i class="bi bi-search"></i></button>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+
+    <main class="container mb-5">
+        {% if messages %}
+            <div class="row justify-content-center">
+                <div class="col-md-8 col-lg-6 mt-4 mb-2">
+                    {% for message in messages %}
+                        <div class="alert 
+                            {% if message.tags == 'error' %}alert-danger
+                            {% elif message.tags == 'success' %}alert-success
+                            {% else %}alert-info{% endif %} 
+                            alert-dismissible fade show shadow-sm rounded-4" role="alert">
+                            
+                            {% if message.tags == 'success' %}
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                            {% elif message.tags == 'error' %}
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            {% else %}
+                                <i class="bi bi-info-circle-fill me-2"></i>
+                            {% endif %}
+                            
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <footer class="fastx-footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <h4 class="fw-bold mb-3 d-flex align-items-center">
+                        <img src="{% static 'images/logo1.png' %}" alt="FASTX Logo" height="30" class="me-2 rounded-circle">
+                        FAST<span style="color: var(--fastx-sky);">X</span>
+                    </h4>
+                    <p class="text-light opacity-75">10-Minute Hyper Local Delivery for Groceries, Meat, and everyday essentials.</p>
+                </div>
+                <div class="col-md-2 mb-4">
+                    <h5 class="mb-3">Company</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#">About Us</a></li>
+                        <li><a href="#">Careers</a></li>
+                        <li><a href="{% url 'privacy' %}">Privacy Policy</a></li>
+                        <li><a href="{% url 'terms' %}">Terms of Service</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-2 mb-4">
+                    <h5 class="mb-3">Partner</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="{% url 'register_seller' %}">Sell on FASTX (Register)</a></li>
+                        <li><a href="{% url 'rider_register' %}">Become a Rider (Register)</a></li>
+                        <li><a href="{% url 'rider_login' %}">Rider Login</a></li>
+                        <li><a href="#">Franchise</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <h5 class="mb-3">Contact Support</h5>
+                    <p class="text-light opacity-75"><i class="bi bi-envelope me-2"></i> Info@fastxmart.com </p>
+                    <p class="text-light opacity-75"><i class="bi bi-telephone me-2"></i> +91 93441 33010 </p>
+                    <div class="mt-3">
+                        <a href="#" class="text-white fs-4 me-3"><i class="bi bi-instagram"></i></a>
+                        <a href="#" class="text-white fs-4 me-3"><i class="bi bi-twitter-x"></i></a>
+                        <a href="#" class="text-white fs-4"><i class="bi bi-linkedin"></i></a>
+                    </div>
+                </div>
+            </div>
+            <hr class="border-secondary mt-4">
+            <div class="text-center text-light opacity-50 mt-3">
+                <small>&copy; 2026 FASTX Hyper Local Delivery. All prices are in Indian Rupees (₹) inclusive of GST. <br> <p>Developed by <a href="https://azentech.co/" target="_blank">AzenTech</a></p></small>
+            </div>
+        </div>
+    </footer>
+
+    {% if request.user.is_authenticated %}
+    <div class="mobile-bottom-nav mobile-only">
+        {% if request.user.is_superuser %}
+            <a href="{% url 'admin_dashboard' %}" class="{% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
+                <i class="bi bi-speedometer2"></i> Admin
+            </a>
+            <a href="{% url 'manage_customers' %}">
+                <i class="bi bi-people"></i> Users
+            </a>
+        {% elif request.user.rider_profile %}
+            <a href="{% url 'rider_dashboard' %}" class="{% if request.resolver_match.url_name == 'rider_dashboard' %}active{% endif %}">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+            <a href="{% url 'rider_history' %}" class="{% if request.resolver_match.url_name == 'rider_history' %}active{% endif %}">
+                <i class="bi bi-clock-history"></i> History
+            </a>
+        {% elif request.user.is_vendor %}
+            <a href="{% url 'vendor_dashboard' %}" class="{% if request.resolver_match.url_name == 'vendor_dashboard' %}active{% endif %}">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+            <a href="{% url 'vendor_products' %}" class="{% if request.resolver_match.url_name == 'vendor_products' %}active{% endif %}">
+                <i class="bi bi-box-seam"></i> Inventory
+            </a>
+            <a href="{% url 'vendor_order_history' %}" class="{% if request.resolver_match.url_name == 'vendor_order_history' %}active{% endif %}">
+                <i class="bi bi-clock-history"></i> History
+            </a>
+        {% else %}
+            <a href="{% url 'customer_home' %}" class="{% if request.resolver_match.url_name == 'customer_home' %}active{% endif %}">
+                <i class="bi bi-house-door"></i> Home
+            </a>
+            <a href="{% url 'cart_checkout' %}" class="position-relative {% if request.resolver_match.url_name == 'cart_checkout' %}active{% endif %}">
+                <i class="bi bi-cart3"></i> Cart
+                <span class="badge rounded-pill cart-badge" style="top: -5px; right: 10px;">{{ cart_count|default:"0" }}</span>
+            </a>
+            <a href="{% url 'track_orders' %}" class="{% if request.resolver_match.url_name == 'track_orders' %}active{% endif %}">
+                <i class="bi bi-box-seam"></i> Orders
+            </a>
+        {% endif %}
+
+        <a data-bs-toggle="offcanvas" data-bs-target="#profileOffcanvas" aria-controls="profileOffcanvas" class="cursor-pointer">
+            {% if request.user.is_vendor and request.user.vendor_profile.profile_photo %}
+                <img src="{{ request.user.vendor_profile.profile_photo.url }}" alt="Profile" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; display: block; margin: 0 auto 2px auto; border: 1px solid var(--fastx-navy);">
+            {% elif request.user.rider_profile and request.user.rider_profile.profile_photo %}
+                <img src="{{ request.user.rider_profile.profile_photo.url }}" alt="Profile" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; display: block; margin: 0 auto 2px auto; border: 1px solid var(--fastx-navy);">
+            {% elif request.user.customer_profile and request.user.customer_profile.profile_picture %}
+                <img src="{{ request.user.customer_profile.profile_picture.url }}" alt="Profile" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; display: block; margin: 0 auto 2px auto; border: 1px solid var(--fastx-navy);">
+            {% else %}
+                <i class="bi bi-person"></i>
+            {% endif %}
+            Profile
+        </a>
+    </div>
+    {% endif %}
+
+    <div class="offcanvas offcanvas-end border-0 shadow" tabindex="-1" id="profileOffcanvas" aria-labelledby="profileOffcanvasLabel" style="width: 320px;">
+        <div class="offcanvas-header bg-light border-bottom py-4">
+            <div class="d-flex align-items-center">
+                {% if request.user.is_authenticated %}
+                    {% if request.user.is_vendor and request.user.vendor_profile.profile_photo %}
+                        <img src="{{ request.user.vendor_profile.profile_photo.url }}" alt="Profile" class="profile-img-nav me-3" style="width: 55px; height: 55px;">
+                    {% elif request.user.rider_profile and request.user.rider_profile.profile_photo %}
+                        <img src="{{ request.user.rider_profile.profile_photo.url }}" alt="Profile" class="profile-img-nav me-3" style="width: 55px; height: 55px;">
+                    {% elif request.user.customer_profile and request.user.customer_profile.profile_picture %}
+                        <img src="{{ request.user.customer_profile.profile_picture.url }}" alt="Profile" class="profile-img-nav me-3" style="width: 55px; height: 55px;">
+                    {% else %}
+                        <i class="bi bi-person-circle text-muted me-3" style="font-size: 3.5rem;"></i>
+                    {% endif %}
+                {% else %}
+                    <i class="bi bi-person-circle text-muted me-3" style="font-size: 3.5rem;"></i>
+                {% endif %}
+                
+                <div>
+                    <h5 class="offcanvas-title fw-bold m-0" id="profileOffcanvasLabel">
+                        {% if request.user.is_authenticated %}
+                            Hello, {{ request.user.first_name|default:"Shopper" }}
+                        {% else %}
+                            Welcome to FASTX
+                        {% endif %}
+                    </h5>
+                    {% if request.user.is_authenticated %}
+                        <small class="text-muted">{{ request.user.email }}</small>
+                    {% endif %}
+                </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        
+        <div class="offcanvas-body p-0 d-flex flex-column">
+            <div class="list-group list-group-flush mt-2 flex-grow-1">
+                
+                {% if request.user.is_superuser %}
+                    <h6 class="dropdown-header text-danger mt-3"><i class="bi bi-shield-lock-fill"></i> System Admin</h6>
+                    <a class="list-group-item list-group-item-action py-3 border-0" href="{% url 'admin_dashboard' %}"><i class="bi bi-speedometer2 me-3 fs-5 text-muted"></i> Control Center</a>
+                    <a class="list-group-item list-group-item-action py-3 border-0" href="{% url 'manage_customers' %}"><i class="bi bi-people me-3 fs-5 text-muted"></i> Manage Customers</a>
+                    <a class="list-group-item list-group-item-action py-3 border-0" href="{% url 'manage_sellers' %}"><i class="bi bi-shop me-3 fs-5 text-muted"></i> Manage Sellers</a>
+                
+                {% elif request.user.is_vendor %}
+                    <h6 class="dropdown-header text-orange mt-3"><i class="bi bi-shop"></i> Vendor Portal</h6>
+                    <a class="list-group-item list-group-item-action py-3 border-0" href="{% url 'vendor_dashboard' %}"><i class="bi bi-speedometer2 me-3 fs-5 text-muted"></i> Analytics Dashboard</a>
+                    <a class="list-group-item list-group-item-action py-3 border-0" href="{% url 'vendor_products' %}"><i class="bi bi-box-seam me-3 fs-5 text-muted"></i> Manage Inventory</a>
+                    <a class="list-group-item list-group-item-action py-3 border-0" href="{% url 'vendor_order_history' %}"><i class="bi bi-clock-history me-3 fs-5 text-muted"></i> Order History</a>
+                
+                {% elif request.user.rider_profile %}
+                    <h6 class="dropdown-header text-success mt-3"><i class="bi bi-bicycle"></i> Rider Portal</h6>
+                    <a class="list-group-item list-group-item-action py-3 border-0" href="{% url 'rider_dashboard' %}"><i class="bi bi-speedometer2 me-3 fs-5 text-muted"></i> Rider Dashboard</a>
+                    <a class="list-group-item list-group-item-action py-3 border-0" href="{% url 'rider_history' %}"><i class="bi bi-clock-history me-3 fs-5 text-muted"></i> Delivery History</a>
+
+                {% elif request.user.is_authenticated %}
+                    <a class="list-group-item list-group-item-action py-3 border-0" href="{% url 'customer_home' %}"><i class="bi bi-shop-window me-3 fs-5 text-muted"></i> Shop Groceries</a>
+                    <a class="list-group-item list-group-item-action py-3 border-0" href="{% url 'track_orders' %}"><i class="bi bi-box-seam me-3 fs-5 text-muted"></i> Track Orders</a>
+                    <a class="list-group-item list-group-item-action py-3 border-0" href="{% url 'wallet_dashboard' %}"><i class="bi bi-wallet2 me-3 fs-5 text-muted"></i> FASTX Wallet</a>
+                    <a class="list-group-item list-group-item-action py-3 border-0" href="{% url 'saved_addresses' %}"><i class="bi bi-geo-alt me-3 fs-5 text-muted"></i> Saved Addresses</a>
+                    
+                    <hr class="my-2 border-secondary opacity-25">
+                    
+                    <div id="sidebar-wishlist-container">
+                        {% if request.user.customer_profile.wishlist_items.exists %}
+                            <a class="list-group-item list-group-item-action py-3 border-0" href="{% url 'view_wishlist' %}">
+                                <i class="bi bi-heart-fill text-danger me-3 fs-5"></i> My Wishlist
+                                <span class="badge bg-danger rounded-pill float-end wishlist-count-badge">{{ request.user.customer_profile.wishlist_items.count }}</span>
+                            </a>
+                        {% else %}
+                            <a class="list-group-item list-group-item-action py-3 border-0" href="{% url 'view_wishlist' %}">
+                                <i class="bi bi-heart me-3 fs-5 text-muted"></i> My Wishlist
+                            </a>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <a class="list-group-item list-group-item-action py-3 border-0 fw-bold" href="{% url 'unified_login' %}"><i class="bi bi-box-arrow-in-right me-3 fs-5"></i> Login</a>
+                {% endif %}
+            </div>
+
+            {% if request.user.is_authenticated %}
+            <div class="mt-auto mb-3">
+                <hr class="my-2 border-secondary opacity-25">
+                
+                <a class="list-group-item list-group-item-action py-3 border-0" href="{% url 'settings_overview' %}">
+                    <i class="bi bi-gear-fill me-3 fs-5 text-secondary"></i> Account Settings
+                </a>
+                
+                <hr class="my-2 border-secondary opacity-25">
+                
+                <a class="list-group-item list-group-item-action py-3 border-0 text-danger fw-bold" href="{% url 'logout' %}">
+                    <i class="bi bi-box-arrow-right me-3 fs-5 text-danger"></i> Logout
+                </a>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+
+    <div class="modal fade" id="globalLocationModal" tabindex="-1" aria-labelledby="locationModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow-lg">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="locationModalLabel"><i class="bi bi-geo-alt text-orange me-2"></i>Update Delivery Location</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-pills nav-fill bg-light rounded-pill p-1 mb-3" id="global-address-tabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active rounded-pill fw-medium" id="global-auto-tab" data-bs-toggle="pill" data-bs-target="#global-auto-address" type="button" role="tab">Auto Detect</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link rounded-pill fw-medium" id="global-manual-tab" data-bs-toggle="pill" data-bs-target="#global-manual-address" type="button" role="tab">Enter Manually</button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="global-address-tab-content">
+                        <div class="tab-pane fade show active" id="global-auto-address" role="tabpanel">
+                            <div class="text-center py-4">
+                                <button id="btn-global-locate" class="btn btn-outline-primary rounded-pill px-4">
+                                    <i class="bi bi-crosshair me-1"></i> Fetch Live Pincode & City
+                                </button>
+                            </div>
+                            <div id="global-auto-result" class="p-3 border border-primary border-opacity-25 rounded-3 bg-light d-none align-items-center mb-3">
+                                <div class="spinner-border spinner-border-sm text-primary me-3 d-none" id="global-location-spinner" role="status"></div>
+                                <div class="w-100">
+                                    <strong class="text-dark d-block" id="global-address-title">Locating...</strong>
+                                    <small class="text-muted mt-1 d-block" id="global-address-text"></small>
+                                    <input type="hidden" id="fetched-city">
+                                    <input type="hidden" id="fetched-pincode">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="global-manual-address" role="tabpanel">
+                            <div class="row g-3 mb-3">
+                                <div class="col-12">
+                                    <label class="form-label small text-muted mb-1">House/Flat/Block No.</label>
+                                    <input type="text" id="manual-flat" class="form-control" placeholder="e.g. Flat 402, Block B">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label small text-muted mb-1">Street / Area</label>
+                                    <input type="text" id="manual-street" class="form-control" placeholder="e.g. Main Street, Marathahalli">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-muted mb-1">City</label>
+                                    <input type="text" id="manual-city" class="form-control" placeholder="e.g. Bengaluru">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-muted mb-1">Pincode</label>
+                                    <input type="text" id="manual-pincode" class="form-control" placeholder="e.g. 560037">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button id="btn-save-location" class="btn btn-dark w-100 rounded-pill py-2 fw-bold">Save & Update</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        const globalCsrfToken = "{{ csrf_token }}";
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const btnLocate = document.getElementById('btn-global-locate');
+            if(btnLocate) {
+                btnLocate.addEventListener('click', function() {
+                    let resultContainer = document.getElementById('global-auto-result');
+                    let spinner = document.getElementById('global-location-spinner');
+                    let title = document.getElementById('global-address-title');
+                    let text = document.getElementById('global-address-text');
+                    
+                    resultContainer.classList.remove('d-none');
+                    resultContainer.classList.add('d-flex');
+                    spinner.classList.remove('d-none');
+                    title.innerText = "Connecting to GPS...";
+                    text.innerText = "Please allow location permissions...";
+                    
+                    if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(
+                            function(position) {
+                                let lat = position.coords.latitude;
+                                let lon = position.coords.longitude;
+                                
+                                title.innerText = "Fetching Address Data...";
+                                
+                                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        spinner.classList.add('d-none');
+                                        title.innerHTML = '<i class="bi bi-check-circle-fill text-success me-1"></i> Location Secured';
+                                        text.innerText = data.display_name;
+                                        
+                                        let city = data.address.city || data.address.town || data.address.village || data.address.suburb || data.address.state_district || "Unknown City";
+                                        let pincode = data.address.postcode || "";
+                                        
+                                        document.getElementById('fetched-city').value = city;
+                                        document.getElementById('fetched-pincode').value = pincode;
+                                    })
+                                    .catch(error => {
+                                        spinner.classList.add('d-none');
+                                        title.innerHTML = '<i class="bi bi-exclamation-triangle text-warning me-1"></i> Partial Location Found';
+                                        text.innerText = "Could not convert coordinates to address text.";
+                                    });
+                            },
+                            function(error) {
+                                spinner.classList.add('d-none');
+                                title.innerHTML = '<i class="bi bi-exclamation-triangle text-danger me-1"></i> Location Denied';
+                                text.innerText = "Please enable location services in your browser settings.";
+                            }
+                        );
+                    } else {
+                        alert("Geolocation is not supported by this browser.");
+                    }
+                });
+            }
+
+            const btnSave = document.getElementById('btn-save-location');
+            if(btnSave) {
+                btnSave.addEventListener('click', function() {
+                    let navDisplay = document.getElementById('nav-address-display');
+                    let navDisplayMobile = document.getElementById('nav-address-display-mobile');
+                    let activeTabEl = document.querySelector('#global-address-tabs .active');
+                    let activeTab = activeTabEl ? activeTabEl.getAttribute('id') : 'global-auto-tab';
+                    let finalCity = "";
+                    let finalPincode = "";
+
+                    if (activeTab === 'global-auto-tab') {
+                        finalCity = document.getElementById('fetched-city').value;
+                        finalPincode = document.getElementById('fetched-pincode').value;
+                        if (!finalCity) {
+                            alert("Please fetch your location first.");
+                            return;
+                        }
+                    } else {
+                        finalCity = document.getElementById('manual-city').value.trim();
+                        finalPincode = document.getElementById('manual-pincode').value.trim();
+                        if (!finalCity || !finalPincode) {
+                            alert("Please enter both City and Pincode.");
+                            return;
+                        }
+                    }
+
+                    if (navDisplay) navDisplay.innerHTML = `${finalCity} ${finalPincode} <i class="bi bi-chevron-down"></i>`;
+                    if (navDisplayMobile) navDisplayMobile.innerHTML = `${finalPincode}`;
+                    
+                    fetch('/update-location/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({
+                            city: finalCity,
+                            pincode: finalPincode
+                        })
+                    }).then(response => {
+                        var myModalEl = document.getElementById('globalLocationModal');
+                        var modal = bootstrap.Modal.getInstance(myModalEl);
+                        if(modal) {
+                            modal.hide();
+                        }
+                        window.location.reload();
+                    }).catch(err => {
+                        console.error("Failed to save location updates dynamically:", err);
+                        window.location.reload();
+                    });
+                });
+            }
+        });
+
+        function updateCartBadge(newTotalCount) {
+            let badges = document.querySelectorAll('.cart-badge');
+            badges.forEach(badge => {
+                badge.innerText = newTotalCount;
+            });
+        }
+    </script>
+</body>
+</html>

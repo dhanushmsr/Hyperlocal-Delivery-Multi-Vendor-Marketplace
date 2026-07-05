@@ -1,0 +1,693 @@
+{% extends 'base.html' %}
+
+{% block title %}FASTX | 10-Minute Delivery{% endblock %}
+
+{% block content %}
+<style>
+    /* Premium E-commerce Styling */
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    .category-pill { transition: transform 0.2s; min-width: 90px; }
+    .category-pill:hover { transform: translateY(-3px); }
+    .category-img-wrapper { transition: border-color 0.3s, box-shadow 0.3s; }
+    .category-pill:hover .category-img-wrapper { border-color: var(--fastx-orange) !important; box-shadow: 0 6px 15px rgba(255, 107, 0, 0.2) !important; }
+    
+    .cursor-pointer { cursor: pointer; }
+    .product-card { transition: transform 0.2s ease, box-shadow 0.2s ease; border: 1px solid #f0f0f0; }
+    .product-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important; border-color: #d0e3ff !important; }
+    
+    .floating-cart-btn { transition: transform 0.2s ease; }
+    .floating-cart-btn:hover { transform: scale(1.1); }
+
+    /* ==================================================
+       NEW DYNAMIC HERO SECTION STYLES
+       ================================================== */
+    .hero-wrapper {
+        position: relative;
+        min-height: 380px;
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+    }
+
+    .hero-bg {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        /* Dark gradient overlay + High Quality Grocery Image */
+        background: linear-gradient(135deg, rgba(10, 31, 68, 0.85) 0%, rgba(10, 31, 68, 0.6) 100%), 
+                    url('https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1920&q=80') center/cover no-repeat;
+        transform: scale(1.05);
+        animation: subtleZoom 20s infinite alternate ease-in-out;
+        z-index: 1;
+    }
+
+    @keyframes subtleZoom {
+        0% { transform: scale(1.05); }
+        100% { transform: scale(1.0); }
+    }
+
+    .hero-content {
+        z-index: 3; /* Above the animations */
+        width: 100%;
+    }
+
+    .typing-text {
+        color: #ff6b00; /* FASTX Orange */
+        font-weight: 800;
+        border-right: 3px solid #ff6b00;
+        padding-right: 5px;
+        animation: blinkCursor 0.8s infinite normal;
+    }
+
+    @keyframes blinkCursor {
+        0%, 100% { border-color: transparent; }
+        50% { border-color: #ff6b00; }
+    }
+
+    .floating-badge {
+        animation: floatUpDown 6s ease-in-out infinite;
+        backdrop-filter: blur(8px);
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .floating-badge.delay { animation-delay: 2s; animation-duration: 7s; }
+
+    @keyframes floatUpDown {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-15px); }
+    }
+
+    .glowing-text {
+        text-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    }
+
+    /* Rocket Animation */
+    .fastx-rocket {
+        position: absolute;
+        font-size: 6rem;
+        color: #ff6b00;
+        bottom: -20%;
+        left: -10%;
+        animation: flyAcross 5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        z-index: 2; /* Below text, above background */
+        filter: drop-shadow(0 0 20px rgba(255,107,0,0.6));
+    }
+
+    @keyframes flyAcross {
+        0% { transform: translate(0, 0) rotate(45deg) scale(0.5); opacity: 0; }
+        10% { opacity: 1; transform: translate(10vw, -10vh) rotate(45deg) scale(1); }
+        90% { opacity: 1; }
+        100% { transform: translate(120vw, -120vh) rotate(45deg) scale(1.5); opacity: 0; }
+    }
+
+    /* Paper Blasting / Confetti Effect */
+    .confetti {
+        position: absolute;
+        width: 10px;
+        height: 25px;
+        opacity: 0;
+        z-index: 2; /* Below text, above background */
+    }
+    
+    .c1 { background: #ff6b00; left: 10%; animation: blast 3s ease-in infinite 0.1s; }
+    .c2 { background: #4fc3f7; left: 30%; animation: blast 4s ease-in infinite 1.2s; }
+    .c3 { background: #fff; left: 50%; animation: blast 3.5s ease-in infinite 0.5s; width: 12px; height: 12px; border-radius: 50%; }
+    .c4 { background: #ffca28; left: 70%; animation: blast 4.5s ease-in infinite 2s; }
+    .c5 { background: #ff6b00; left: 90%; animation: blast 3.2s ease-in infinite 0.8s; width: 15px; height: 15px; border-radius: 50%; }
+    .c6 { background: #4fc3f7; left: 20%; animation: blast 4.1s ease-in infinite 1.5s; }
+    .c7 { background: #ffca28; left: 80%; animation: blast 3.8s ease-in infinite 0.3s; }
+
+    @keyframes blast {
+        0% { top: -10%; transform: rotate(0deg) scale(1); opacity: 1; }
+        100% { top: 110%; transform: rotate(720deg) scale(0.5); opacity: 0; }
+    }
+</style>
+
+<!-- 1. DYNAMIC HERO SECTION WITH ANIMATIONS -->
+<div class="row mt-3 mb-4">
+    <div class="col-12">
+        <div class="hero-wrapper rounded-4 shadow-lg">
+            <div class="hero-bg"></div>
+            
+            <!-- Confetti Particles -->
+            <div class="confetti c1"></div><div class="confetti c2"></div>
+            <div class="confetti c3"></div><div class="confetti c4"></div>
+            <div class="confetti c5"></div><div class="confetti c6"></div>
+            <div class="confetti c7"></div>
+
+            <!-- Flying Rocket -->
+            <i class="bi bi-rocket-takeoff-fill fastx-rocket"></i>
+            
+            <div class="hero-content p-4 p-md-5">
+                <div class="row align-items-center">
+                    <div class="col-lg-8">
+                        <span class="badge bg-warning text-dark mb-3 px-3 py-2 rounded-pill fw-bold shadow fs-6">
+                            <i class="bi bi-lightning-charge-fill me-1"></i> Delivery in 10 Minutes
+                        </span>
+                        
+                        <h1 class="display-4 fw-bold text-white mb-2 glowing-text" style="letter-spacing: -1px;">
+                            We deliver <br class="d-md-none">
+                            <span class="typing-text" id="typewriter"></span>
+                        </h1>
+                        
+                        <p class="lead text-white fw-medium mt-3 mb-0 opacity-75 fs-5 glowing-text" style="max-width: 600px;">
+                            Skip the store. Get farm-fresh vegetables, dairy, snacks, and daily essentials delivered right to your doorstep instantly.
+                        </p>
+
+                        <div class="d-flex gap-3 mt-4">
+                            <div class="floating-badge text-white px-3 py-2 rounded-pill shadow-sm d-flex align-items-center">
+                                <i class="bi bi-shield-check text-success fs-5 me-2"></i> <span class="fw-medium small">100% Fresh</span>
+                            </div>
+                            <div class="floating-badge delay text-white px-3 py-2 rounded-pill shadow-sm d-flex align-items-center">
+                                <i class="bi bi-wallet2 text-info fs-5 me-2"></i> <span class="fw-medium small">Best Prices</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 2. HORIZONTAL CATEGORY ROW -->
+<div class="mb-4">
+    <h6 class="fw-bold text-muted text-uppercase small mb-3 ps-1">Explore by Category</h6>
+    <div class="d-flex overflow-auto hide-scrollbar gap-3 pb-3 px-1">
+        
+        <div class="text-center cursor-pointer category-pill" onclick="document.getElementById('categoryFilter').value='all'; applyFilters();">
+            <div class="category-img-wrapper bg-light rounded-circle d-flex align-items-center justify-content-center mb-2 mx-auto border border-2" style="width: 75px; height: 75px;">
+                <i class="bi bi-grid-fill fs-3 text-navy"></i>
+            </div>
+            <small class="fw-bold text-dark d-block text-truncate">All Items</small>
+        </div>
+
+        {% for category in categories %}
+        <div class="text-center cursor-pointer category-pill" onclick="document.getElementById('categoryFilter').value='{{ category.name|lower }}'; applyFilters();">
+            <div class="category-img-wrapper bg-white rounded-circle d-flex align-items-center justify-content-center mb-2 mx-auto border border-2 overflow-hidden shadow-sm" style="width: 75px; height: 75px;">
+                {% if category.image %}
+                    <img src="{{ category.image.url }}" class="w-100 h-100 object-fit-cover" alt="{{ category.name }}">
+                {% elif category.image_url %}
+                    <img src="{{ category.image_url }}" class="w-100 h-100 object-fit-cover" alt="{{ category.name }}">
+                {% else %}
+                    <i class="{{ category.icon|default:'bi bi-basket' }} fs-3 text-navy"></i>
+                {% endif %}
+            </div>
+            <small class="fw-bold text-dark d-block text-truncate px-1" style="max-width: 90px;">{{ category.name }}</small>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- 3. STICKY FILTER BAR -->
+<div class="card border-0 shadow-sm rounded-pill p-2 mb-4 sticky-top" style="top: 75px; z-index: 1020; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);">
+    <div class="row g-2 align-items-center">
+        <div class="col-12 col-lg-4">
+            <div class="input-group rounded-pill overflow-hidden bg-light">
+                <span class="input-group-text bg-transparent border-0"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" id="searchInput" class="form-control bg-transparent border-0 shadow-none py-2" placeholder="Search for milk, bread, snacks..." onkeyup="applyFilters()">
+            </div>
+        </div>
+        
+        <div class="col-6 col-md-4 col-lg-3">
+            <div class="input-group rounded-pill overflow-hidden border">
+                <span class="input-group-text bg-white border-0 text-muted"><i class="bi bi-grid"></i></span>
+                <select id="categoryFilter" class="form-select border-0 shadow-none fw-medium py-2" onchange="applyFilters()">
+                    <option value="all">All Categories</option>
+                    {% for category in categories %}
+                        <option value="{{ category.name|lower }}">{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="input-group rounded-pill overflow-hidden border">
+                <span class="input-group-text bg-white border-0 text-muted"><i class="bi bi-tag"></i></span>
+                <select id="priceFilter" class="form-select border-0 shadow-none fw-medium py-2" onchange="applyFilters()">
+                    <option value="all">Any Price</option>
+                    <option value="50">Under ₹50</option>
+                    <option value="100">Under ₹100</option>
+                    <option value="500">Under ₹500</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4 col-lg-3">
+            <div class="input-group rounded-pill overflow-hidden border">
+                <span class="input-group-text bg-white border-0 text-muted"><i class="bi bi-sort-down"></i></span>
+                <select id="sortSelect" class="form-select border-0 shadow-none fw-bold text-navy py-2" onchange="applyFilters()">
+                    <option value="default">Recommended</option>
+                    <option value="top_rated">Top Rated</option>
+                    <option value="price_low">Price: Low to High</option>
+                    <option value="price_high">Price: High to Low</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 4. PRODUCT FEED -->
+<div id="product-feed" class="pb-5 mb-5">
+    <div id="no-results-msg" class="text-center py-5 d-none">
+        <i class="bi bi-search fs-1 text-muted opacity-50 mb-3 d-block"></i>
+        <h4 class="fw-bold text-dark">No products found</h4>
+        <p class="text-muted">Try adjusting your filters or search term.</p>
+        <button class="btn btn-outline-dark rounded-pill px-4 mt-2" onclick="resetFilters()">Clear All Filters</button>
+    </div>
+
+    {% for category in categories %}
+    <div class="category-section mb-5" data-category="{{ category.name|lower }}">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="fw-bold mb-0 text-navy">{{ category.name }} <i class="bi bi-chevron-right fs-6 text-muted ms-1"></i></h4>
+        </div>
+
+        <div class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-3 product-grid">
+            {% for item in category.items.all %}
+            <div class="col product-wrapper" 
+                 data-price="{{ item.price }}" 
+                 data-name="{{ item.name|lower }}" 
+                 data-rating="{{ item.rating|default:'4.5' }}" 
+                 data-category="{{ category.name|lower }}">
+                
+                <div class="card h-100 product-card position-relative overflow-hidden cursor-pointer rounded-4"
+                     data-id="{{ item.id }}"
+                     data-name="{{ item.name }}"
+                     data-price="{{ item.price }}"
+                     data-image="{% if item.image %}{{ item.image.url }}{% else %}{{ item.image_url }}{% endif %}"
+                     data-stock="{{ item.stock }}"
+                     data-vendor="{{ item.vendor.vendor_profile.business_name|default:'FASTX Direct' }}">
+                    
+                    <!-- WISHLIST HEART BUTTON -->
+                    <div class="position-absolute top-0 end-0 m-2" style="z-index: 10;">
+                        <button class="btn btn-light btn-sm rounded-circle shadow-sm favorite-toggle-btn border" style="width: 32px; height: 32px; padding:0; display: flex; align-items: center; justify-content: center;">
+                            <i class="bi bi-heart text-muted"></i>
+                        </button>
+                    </div>
+
+                    {% if item.stock <= 0 %}
+                    <div class="position-absolute w-100 h-100 d-flex justify-content-center align-items-center" style="background: rgba(255,255,255,0.7); backdrop-filter: blur(2px); z-index: 5;">
+                        <span class="badge bg-danger fs-6 px-3 py-2 shadow text-uppercase border border-white border-2">Out of Stock</span>
+                    </div>
+                    {% endif %}
+
+                    <div class="bg-white rounded-top-4 overflow-hidden d-flex justify-content-center align-items-center position-relative p-2" style="height: 140px;">
+                        <img src="{% if item.image %}{{ item.image.url }}{% else %}{{ item.image_url }}{% endif %}" alt="{{ item.name }}" class="w-100 h-100 object-fit-contain transition-all product-img">
+                    </div>
+                    
+                    <div class="card-body d-flex flex-column p-3 bg-light bg-opacity-50">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <h6 class="card-title fw-bold mb-0 text-dark lh-sm" style="font-size: 0.9rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">{{ item.name }}</h6>
+                        </div>
+                        <small class="text-muted d-block mb-2" style="font-size: 0.75rem;"><i class="bi bi-shop me-1"></i>{{ item.vendor.vendor_profile.business_name|default:'FASTX'|truncatechars:15 }}</small>
+                        
+                        <div class="mt-auto d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="fw-bold fs-6 text-dark">₹{{ item.price }}</span>
+                            </div>
+                            
+                            <!-- ADD TO CART BUTTON -->
+                            <button class="btn {% if item.stock > 0 %}btn-outline-danger{% else %}btn-secondary disabled{% endif %} rounded-3 px-3 py-1 btn-sm fw-bold border-2 add-to-cart-btn">
+                                {% if item.stock > 0 %}ADD{% else %}SOLD OUT{% endif %}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12"><p class="text-muted small">No items in this category.</p></div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- PRODUCT MODAL -->
+<div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="position-relative bg-white p-4" style="height: 250px;">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3 bg-light shadow-sm rounded-circle p-2" data-bs-dismiss="modal" style="z-index: 10;"></button>
+                <img id="modal-img" src="" class="w-100 h-100 object-fit-contain" alt="Product">
+            </div>
+            <div class="modal-body p-4 bg-light">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h4 id="modal-name" class="fw-bold mb-0 text-dark lh-sm"></h4>
+                    <h4 id="modal-price" class="fw-bold text-success mb-0 ms-3"></h4>
+                </div>
+                
+                <div class="d-flex gap-2 mb-4 flex-wrap mt-3">
+                    <span class="badge bg-white text-dark border"><i class="bi bi-box-seam text-primary me-1"></i> <span id="modal-stock-display"></span> in stock</span>
+                    <span class="badge bg-white text-dark border"><i class="bi bi-clock-fill text-warning me-1"></i> <span id="modal-time"></span> mins</span>
+                </div>
+
+                <div class="card bg-white border border-secondary border-opacity-25 rounded-3 p-3 mb-4 shadow-sm">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                            <i class="bi bi-shop text-navy fs-5"></i>
+                        </div>
+                        <div>
+                            <p class="small text-muted mb-0 text-uppercase fw-bold" style="font-size: 0.65rem;">Sold & Fulfilled By</p>
+                            <h6 id="modal-vendor" class="mb-0 fw-bold text-dark"></h6>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="modal-action-area">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="fw-bold text-muted">Quantity:</span>
+                        <div class="input-group w-50 shadow-sm rounded-pill overflow-hidden">
+                            <button class="btn btn-white border border-end-0" type="button" onclick="updateModalQty(-1)"><i class="bi bi-dash"></i></button>
+                            <input type="number" id="modal-qty" class="form-control text-center fw-bold border-top border-bottom border-0 bg-white" value="1" min="1" readonly>
+                            <button class="btn btn-white border border-start-0 text-danger" type="button" onclick="updateModalQty(1)"><i class="bi bi-plus"></i></button>
+                        </div>
+                    </div>
+                    
+                    <button id="modal-add-btn" class="btn btn-danger w-100 rounded-pill py-3 fw-bold shadow-sm fs-5">
+                        Add to Cart - <span id="modal-total-price"></span>
+                    </button>
+                    <button id="modal-out-of-stock-btn" class="btn btn-secondary w-100 rounded-pill py-3 fw-bold shadow-sm fs-5 d-none disabled">
+                        Item Sold Out
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<a href="{% url 'cart_checkout' %}" class="d-none d-lg-flex position-fixed btn btn-danger rounded-circle shadow-lg align-items-center justify-content-center floating-cart-btn" 
+   style="bottom: 30px; right: 30px; width: 65px; height: 65px; z-index: 999; text-decoration: none; border: 3px solid white;">
+    <i class="bi bi-cart3 fs-3 text-white"></i>
+    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-dark border border-white" id="floating-cart-count" style="font-size: 0.85rem; padding: 0.4em 0.6em;">{{ cart_count|default:"0" }}</span>
+</a>
+
+<div class="toast-container position-fixed bottom-0 start-50 translate-middle-x p-3" style="z-index: 1055;">
+  <div id="cartToast" class="toast align-items-center text-white border-0 shadow-lg rounded-pill px-2 bg-success" role="alert">
+    <div class="d-flex">
+      <div class="toast-body fw-bold">
+        <i class="bi bi-check-circle-fill me-2"></i> <span id="toastMessage">Item added!</span>
+      </div>
+    </div>
+  </div>
+  <div id="errorToast" class="toast align-items-center text-white border-0 shadow-lg rounded-pill px-2 bg-danger" role="alert">
+    <div class="d-flex">
+      <div class="toast-body fw-bold">
+        <i class="bi bi-exclamation-circle-fill me-2"></i> <span id="errorToastMessage">Error!</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+    // --- BULLETPROOF GUEST REDIRECT VARIABLES ---
+    // Django securely injects true/false based on user login status
+    const IS_AUTHENTICATED = "{{ request.user.is_authenticated|yesno:'true,false' }}" === "true";
+    const LOGIN_URL = "{% url 'unified_login' %}";
+    const csrfToken = "{{ csrf_token }}"; 
+    
+    let currentModalProduct = {};
+    let productModal;
+
+    document.addEventListener("DOMContentLoaded", function() {
+        productModal = new bootstrap.Modal(document.getElementById('productModal'));
+
+        // ==========================================
+        // HERO TYPING ANIMATION
+        // ==========================================
+        const words = ["Fresh Fruits 🍎", "Daily Groceries 🛒", "Hot Snacks 🍿", "Cold Beverages 🥤"];
+        let i = 0;
+        let timer;
+        function typingEffect() {
+            let word = words[i].split('');
+            let loopTyping = function() {
+                if (word.length > 0) {
+                    document.getElementById('typewriter').innerHTML += word.shift();
+                } else {
+                    setTimeout(deletingEffect, 2000);
+                    return false;
+                }
+                timer = setTimeout(loopTyping, 100);
+            };
+            loopTyping();
+        }
+        function deletingEffect() {
+            let word = words[i].split('');
+            let loopDeleting = function() {
+                if (word.length > 0) {
+                    word.pop();
+                    document.getElementById('typewriter').innerHTML = word.join('');
+                } else {
+                    if (words.length > (i + 1)) { i++; } else { i = 0; }
+                    typingEffect();
+                    return false;
+                }
+                timer = setTimeout(loopDeleting, 50);
+            };
+            loopDeleting();
+        }
+        typingEffect(); // Start animation
+
+
+        // Handle Product Details Modal Trigger
+        document.querySelectorAll('.product-card').forEach(card => {
+            card.addEventListener('click', function(e) {
+                if (e.target.closest('.add-to-cart-btn') || e.target.closest('.favorite-toggle-btn')) return; 
+
+                let id = this.getAttribute('data-id');
+                let name = this.getAttribute('data-name');
+                let price = this.getAttribute('data-price');
+                let image = this.getAttribute('data-image');
+                let stock = parseInt(this.getAttribute('data-stock'));
+                let vendor = this.getAttribute('data-vendor');
+
+                document.getElementById('modal-img').src = image;
+                document.getElementById('modal-name').innerText = name;
+                document.getElementById('modal-price').innerText = "₹" + price;
+                document.getElementById('modal-stock-display').innerText = stock;
+                document.getElementById('modal-vendor').innerText = vendor;
+                document.getElementById('modal-qty').value = 1;
+
+                let distance = ((parseInt(id) % 8) + 1.5).toFixed(1); 
+                let time = Math.round(distance * 3.5); 
+                document.getElementById('modal-time').innerText = time;
+
+                currentModalProduct = { id, name, price, image, maxStock: stock };
+                updateModalUI();
+                productModal.show();
+            });
+        });
+
+        // WISHLIST LOGIC
+        document.querySelectorAll('.favorite-toggle-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                
+                // BULLETPROOF REDIRECT: Redirect instantly if guest
+                if (!IS_AUTHENTICATED) {
+                    window.location.href = LOGIN_URL;
+                    return;
+                }
+
+                let card = this.closest('.product-card');
+                let productId = card.getAttribute('data-id');
+                let productName = card.getAttribute('data-name');
+                
+                let icon = this.querySelector('i');
+                icon.style.transform = "scale(1.2)";
+                setTimeout(() => icon.style.transform = "scale(1)", 200);
+                
+                fetch('/wishlist/toggle/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                    body: JSON.stringify({ product_id: productId })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        icon.className = data.action === 'added' ? "bi bi-heart-fill text-danger" : "bi bi-heart text-muted";
+                        document.getElementById('toastMessage').innerText = data.action === 'added' ? productName + " added to Wishlist!" : productName + " removed.";
+                        new bootstrap.Toast(document.getElementById('cartToast')).show();
+                    } else {
+                        document.getElementById('errorToastMessage').innerText = data.message;
+                        new bootstrap.Toast(document.getElementById('errorToast')).show();
+                    }
+                })
+                .catch(err => console.error("Error toggling wishlist.", err));
+            });
+        });
+
+        // ADD TO CART GRID BUTTON
+        document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                let card = this.closest('.product-card');
+                let id = card.getAttribute('data-id');
+                let name = card.getAttribute('data-name');
+                let price = card.getAttribute('data-price');
+                let image = card.getAttribute('data-image');
+                
+                addToCart(id, name, price, image, 1);
+            });
+        });
+
+        // Add to Cart from Modal
+        document.getElementById('modal-add-btn').addEventListener('click', function() {
+            let qty = parseInt(document.getElementById('modal-qty').value);
+            addToCart(currentModalProduct.id, currentModalProduct.name, currentModalProduct.price, currentModalProduct.image, qty);
+        });
+    });
+
+    function updateModalQty(change) {
+        let qtyInput = document.getElementById('modal-qty');
+        let newQty = parseInt(qtyInput.value) + change;
+        if (newQty >= 1) {
+            qtyInput.value = newQty;
+            updateModalUI();
+        }
+    }
+
+    function updateModalUI() {
+        let qty = parseInt(document.getElementById('modal-qty').value);
+        let total = (parseFloat(currentModalProduct.price) * qty).toFixed(2);
+        document.getElementById('modal-total-price').innerText = "₹" + total;
+
+        let addBtn = document.getElementById('modal-add-btn');
+        let outOfStockBtn = document.getElementById('modal-out-of-stock-btn');
+
+        if (currentModalProduct.maxStock <= 0 || qty > currentModalProduct.maxStock) {
+            addBtn.classList.add('d-none');
+            outOfStockBtn.classList.remove('d-none');
+        } else {
+            addBtn.classList.remove('d-none');
+            outOfStockBtn.classList.add('d-none');
+        }
+    }
+
+    // MAIN AJAX CART FUNCTION
+    function addToCart(id, name, price, image, quantity = 1) {
+        // BULLETPROOF REDIRECT: Redirect instantly if guest
+        if (!IS_AUTHENTICATED) {
+            window.location.href = LOGIN_URL;
+            return;
+        }
+
+        fetch('/add-to-cart/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ id, name, price, image, quantity })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                let navBadge = document.getElementById('global-cart-count');
+                let floatBadge = document.getElementById('floating-cart-count');
+                if(navBadge) navBadge.innerText = data.cart_count;
+                if(floatBadge) floatBadge.innerText = data.cart_count;
+                
+                document.getElementById('toastMessage').innerText = name + " added to cart!";
+                new bootstrap.Toast(document.getElementById('cartToast')).show();
+                productModal.hide(); 
+            } else {
+                document.getElementById('errorToastMessage').innerText = data.message || "Not enough stock.";
+                new bootstrap.Toast(document.getElementById('errorToast')).show();
+            }
+        })
+        .catch(error => console.error("Network Error: ", error));
+    }
+
+    // SEARCH & FILTER LOGIC
+    function applyFilters() {
+        let searchQuery = document.getElementById('searchInput').value.toLowerCase();
+        let selectedCategory = document.getElementById('categoryFilter').value.toLowerCase();
+        let priceLimit = document.getElementById('priceFilter').value;
+        let sortMode = document.getElementById('sortSelect').value;
+
+        let totalVisibleProducts = 0;
+        let allWrappers = Array.from(document.querySelectorAll('.product-wrapper'));
+
+        allWrappers.forEach(wrapper => {
+            let name = wrapper.getAttribute('data-name');
+            let price = parseFloat(wrapper.getAttribute('data-price'));
+            let category = wrapper.getAttribute('data-category');
+            
+            let matchesSearch = name.includes(searchQuery);
+            let matchesCategory = (selectedCategory === 'all' || category === selectedCategory);
+            let matchesPrice = true;
+            
+            if (priceLimit !== 'all') {
+                if (priceLimit === '50' && price > 50) matchesPrice = false;
+                else if (priceLimit === '100' && price > 100) matchesPrice = false;
+                else if (priceLimit === '500' && price > 500) matchesPrice = false;
+            }
+
+            if (matchesSearch && matchesCategory && matchesPrice) {
+                wrapper.style.display = 'block';
+                totalVisibleProducts++;
+            } else {
+                wrapper.style.display = 'none';
+            }
+        });
+
+        if (sortMode !== 'default') {
+            allWrappers.sort((a, b) => {
+                let priceA = parseFloat(a.getAttribute('data-price'));
+                let priceB = parseFloat(b.getAttribute('data-price'));
+                let ratingA = parseFloat(a.getAttribute('data-rating')) || 4.5;
+                let ratingB = parseFloat(b.getAttribute('data-rating')) || 4.5;
+
+                if (sortMode === 'price_low') return priceA - priceB;
+                if (sortMode === 'price_high') return priceB - priceA;
+                if (sortMode === 'top_rated') return ratingB - ratingA;
+            });
+
+            document.querySelectorAll('.category-section h4').forEach(title => title.style.display = 'none');
+
+            let targetGrid = document.querySelector('.category-section .product-grid');
+            if (targetGrid) {
+                allWrappers.forEach(w => targetGrid.appendChild(w));
+            }
+            
+            document.querySelectorAll('.category-section').forEach((section, index) => {
+                section.style.display = (index === 0 && totalVisibleProducts > 0) ? 'block' : 'none';
+            });
+        } else {
+            document.querySelectorAll('.category-section h4').forEach(title => title.style.display = 'block');
+            
+            document.querySelectorAll('.category-section').forEach(section => {
+                let sectionCategory = section.getAttribute('data-category');
+                let grid = section.querySelector('.product-grid');
+                let sectionVisibleCount = 0;
+
+                allWrappers.forEach(wrapper => {
+                    if (wrapper.getAttribute('data-category') === sectionCategory) {
+                        grid.appendChild(wrapper);
+                        if (wrapper.style.display === 'block') sectionVisibleCount++;
+                    }
+                });
+
+                let categoryHiddenBySelection = (selectedCategory !== 'all' && sectionCategory !== selectedCategory);
+                section.style.display = (sectionVisibleCount === 0 || categoryHiddenBySelection) ? 'none' : 'block';
+            });
+        }
+
+        let noResultsMsg = document.getElementById('no-results-msg');
+        if (totalVisibleProducts === 0) {
+            noResultsMsg.classList.remove('d-none');
+        } else {
+            noResultsMsg.classList.add('d-none');
+        }
+    }
+
+    function resetFilters() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('categoryFilter').value = 'all';
+        document.getElementById('priceFilter').value = 'all';
+        document.getElementById('sortSelect').value = 'default';
+        applyFilters();
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,266 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Manage Customers | FASTX Admin{% endblock %}
+
+{% block content %}
+<style>
+    @media print {
+        body { background: white; padding: 0; }
+        .no-print { display: none !important; }
+        .fastx-navbar, .fastx-footer { display: none !important; }
+        .table { border: 1px solid #000; }
+        .table th, .table td { border: 1px solid #000; padding: 8px; }
+        .print-header { display: block !important; text-align: center; margin-bottom: 20px; }
+    }
+    .print-header { display: none; }
+    
+    /* Smooth transition for table rows during search */
+    tbody tr { transition: all 0.2s ease-in-out; }
+</style>
+
+<div class="container-fluid py-4">
+    <!-- Header Section with Search and Print -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 no-print gap-3">
+        <h2 class="fw-bold text-navy mb-0">
+            <i class="bi bi-people-fill text-orange me-2"></i>Customer Database
+        </h2>
+        
+        <div class="d-flex gap-2 align-items-center">
+            <!-- Real-time Search Filter -->
+            <div class="input-group shadow-sm rounded-pill overflow-hidden" style="max-width: 300px;">
+                <span class="input-group-text bg-white border-0 pe-1 text-muted">
+                    <i class="bi bi-search"></i>
+                </span>
+                <input type="text" id="customerSearch" class="form-control border-0 shadow-none" placeholder="Search ID, Name, or Email...">
+            </div>
+            
+            <button onclick="window.print()" class="btn btn-dark rounded-pill shadow-sm text-nowrap">
+                <i class="bi bi-printer me-2"></i> Extract Data
+            </button>
+        </div>
+    </div>
+
+    <!-- Print Only Header -->
+    <div class="print-header">
+        <h2>FASTX Customer Report</h2>
+        <p>Generated on: {% now "F j, Y, g:i a" %}</p>
+    </div>
+
+    <!-- Data Table -->
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="customerTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="py-3 ps-4">ID</th>
+                            <th>Customer Name</th>
+                            <th>Email & Contact</th>
+                            <th>Joined Date</th>
+                            <th>Total Orders</th>
+                            <th>Lifetime Value</th>
+                            <th class="no-print">Status</th>
+                            <th class="text-end pe-4 no-print">Actions & Control</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users_list %}
+                        <tr class="customer-row">
+                            <td class="ps-4 fw-bold text-muted search-id">#{{ user.id }}</td>
+                            <td class="search-name">
+                                <div class="d-flex align-items-center">
+                                    {% if user.customer_profile.profile_picture %}
+                                        <img src="{{ user.customer_profile.profile_picture.url }}" class="rounded-circle object-fit-cover me-2" style="width: 35px; height: 35px;">
+                                    {% else %}
+                                        <div class="bg-secondary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px;">
+                                            <i class="bi bi-person text-secondary"></i>
+                                        </div>
+                                    {% endif %}
+                                    <strong class="text-dark">{{ user.get_full_name|default:user.username }}</strong>
+                                </div>
+                            </td>
+                            <td class="search-email">
+                                <span class="d-block">{{ user.email }}</span>
+                                <!-- FIXED: Correctly targeting the CustomerProfile to display the phone number -->
+                                <small class="text-muted fw-medium">{{ user.customer_profile.phone_number|default:"N/A" }}</small>
+                            </td>
+                            <td>{{ user.date_joined|date:"M d, Y" }}</td>
+                            <td>{{ user.total_orders|default:"0" }}</td>
+                            <td class="text-success fw-bold">₹{{ user.total_spent|default:"0.00" }}</td>
+                            <td class="no-print">
+                                <span id="status-badge-{{ user.id }}" class="badge {% if user.is_active %}bg-success{% else %}bg-danger{% endif %} rounded-pill px-3 py-2">
+                                    {% if user.is_active %}Active{% else %}Blocked{% endif %}
+                                </span>
+                            </td>
+                            <td class="text-end pe-4 no-print">
+                                <div class="d-flex justify-content-end align-items-center gap-2">
+                                    <!-- NEW: View Details Button -->
+                                    <button class="btn btn-sm btn-light text-primary shadow-sm rounded-circle" style="width: 35px; height: 35px;" data-bs-toggle="offcanvas" data-bs-target="#customerOffcanvas-{{ user.id }}">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    
+                                    <div class="form-check form-switch ms-2 mb-0">
+                                        <input class="form-check-input user-status-toggle shadow-none m-0" type="checkbox" role="switch" data-user-id="{{ user.id }}" id="switch-{{ user.id }}" style="cursor: pointer; width: 2.5em; height: 1.25em;" {% if user.is_active %}checked{% endif %}>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- NEW: Customer Details Sidebar (Offcanvas) -->
+                        <div class="offcanvas offcanvas-end" tabindex="-1" id="customerOffcanvas-{{ user.id }}" aria-labelledby="offcanvasLabel-{{ user.id }}">
+                            <div class="offcanvas-header bg-light border-bottom">
+                                <h5 class="offcanvas-title fw-bold text-navy" id="offcanvasLabel-{{ user.id }}"><i class="bi bi-person-badge me-2"></i>Customer Overview</h5>
+                                <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                            </div>
+                            <div class="offcanvas-body">
+                                <div class="text-center mb-4 mt-2">
+                                    {% if user.customer_profile.profile_picture %}
+                                        <img src="{{ user.customer_profile.profile_picture.url }}" class="rounded-circle object-fit-cover shadow-sm mb-3 border" style="width: 120px; height: 120px;">
+                                    {% else %}
+                                        <div class="bg-secondary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3 border" style="width: 120px; height: 120px;">
+                                            <i class="bi bi-person text-secondary" style="font-size: 4rem;"></i>
+                                        </div>
+                                    {% endif %}
+                                    <h4 class="fw-bold mb-1">{{ user.get_full_name|default:user.username }}</h4>
+                                    <span class="badge bg-dark bg-opacity-10 text-dark rounded-pill px-3">Customer ID: #{{ user.id }}</span>
+                                </div>
+                                
+                                <h6 class="fw-bold text-uppercase text-muted small mb-3 border-bottom pb-2">Contact & Location</h6>
+                                <ul class="list-group list-group-flush mb-4">
+                                    <li class="list-group-item px-0 d-flex justify-content-between align-items-center border-0 py-2">
+                                        <span class="text-muted"><i class="bi bi-envelope me-2"></i>Email</span>
+                                        <strong class="text-end">{{ user.email }}</strong>
+                                    </li>
+                                    <li class="list-group-item px-0 d-flex justify-content-between align-items-center border-0 py-2">
+                                        <span class="text-muted"><i class="bi bi-telephone me-2"></i>Phone</span>
+                                        <strong class="text-end">{{ user.customer_profile.phone_number|default:"N/A" }}</strong>
+                                    </li>
+                                    <li class="list-group-item px-0 d-flex justify-content-between align-items-start border-0 py-2">
+                                        <span class="text-muted"><i class="bi bi-geo-alt me-2"></i>Address</span>
+                                        <strong class="text-end text-break" style="max-width: 60%;">
+                                            {{ user.customer_profile.address|default:"Not Provided" }}<br>
+                                            {% if user.customer_profile.city %}{{ user.customer_profile.city }} - {{ user.customer_profile.pincode }}{% endif %}
+                                        </strong>
+                                    </li>
+                                </ul>
+
+                                <h6 class="fw-bold text-uppercase text-muted small mb-3 border-bottom pb-2">Account Metrics</h6>
+                                <ul class="list-group list-group-flush mb-4">
+                                    <li class="list-group-item px-0 d-flex justify-content-between align-items-center border-0 py-2">
+                                        <span class="text-muted"><i class="bi bi-calendar-check me-2"></i>Date Joined</span>
+                                        <strong class="text-end">{{ user.date_joined|date:"M d, Y" }}</strong>
+                                    </li>
+                                </ul>
+
+                                <div class="row g-2 mt-2">
+                                    <div class="col-6">
+                                        <div class="bg-light p-3 rounded-4 text-center border">
+                                            <i class="bi bi-bag-check fs-4 text-orange mb-1 d-block"></i>
+                                            <small class="text-muted d-block fw-bold text-uppercase" style="font-size: 0.7rem;">Total Orders</small>
+                                            <strong class="fs-4 text-dark">{{ user.total_orders|default:"0" }}</strong>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="bg-light p-3 rounded-4 text-center border">
+                                            <i class="bi bi-graph-up-arrow fs-4 text-success mb-1 d-block"></i>
+                                            <small class="text-muted d-block fw-bold text-uppercase" style="font-size: 0.7rem;">Lifetime Value</small>
+                                            <strong class="fs-5 text-success">₹{{ user.total_spent|default:"0.00" }}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% empty %}
+                        <tr><td colspan="8" class="text-center text-muted py-5">No customers found.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <!-- No Results Message (Hidden by default) -->
+                <div id="noSearchResults" class="text-center text-muted py-5 d-none">
+                    <i class="bi bi-search fs-1 text-light mb-2 d-block"></i>
+                    No customers match your search.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        
+        // 1. AJAX toggle logic handles instant block/unblock
+        document.querySelectorAll('.user-status-toggle').forEach(toggle => {
+            toggle.addEventListener('change', function() {
+                const userId = this.getAttribute('data-user-id');
+                const isActive = this.checked;
+                const badge = document.getElementById(`status-badge-${userId}`);
+                
+                // Optimistic UI Update
+                badge.className = `badge rounded-pill px-3 py-2 ${isActive ? 'bg-success' : 'bg-danger'}`;
+                badge.innerText = isActive ? 'Active' : 'Blocked';
+
+                fetch(`/admin-api/toggle-user/${userId}/`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                        'X-CSRFToken': '{{ csrf_token }}' 
+                    },
+                    body: JSON.stringify({ is_active: isActive })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if(!data.success) {
+                        alert('Error: ' + (data.error || 'Could not update status'));
+                        // Revert UI if it fails
+                        this.checked = !isActive;
+                        badge.className = `badge rounded-pill px-3 py-2 ${!isActive ? 'bg-success' : 'bg-danger'}`;
+                        badge.innerText = !isActive ? 'Active' : 'Blocked';
+                    }
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                    alert('Network error occurred.');
+                    // Revert UI
+                    this.checked = !isActive;
+                    badge.className = `badge rounded-pill px-3 py-2 ${!isActive ? 'bg-success' : 'bg-danger'}`;
+                    badge.innerText = !isActive ? 'Active' : 'Blocked';
+                });
+            });
+        });
+
+        // 2. Real-time Frontend Search Filter
+        const searchInput = document.getElementById('customerSearch');
+        const customerRows = document.querySelectorAll('.customer-row');
+        const noResultsDiv = document.getElementById('noSearchResults');
+
+        if(searchInput) {
+            searchInput.addEventListener('keyup', function() {
+                const searchTerm = this.value.toLowerCase();
+                let visibleCount = 0;
+
+                customerRows.forEach(row => {
+                    const id = row.querySelector('.search-id').textContent.toLowerCase();
+                    const name = row.querySelector('.search-name').textContent.toLowerCase();
+                    const email = row.querySelector('.search-email').textContent.toLowerCase();
+
+                    if (id.includes(searchTerm) || name.includes(searchTerm) || email.includes(searchTerm)) {
+                        row.style.display = '';
+                        visibleCount++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                // Show/hide "No results" message
+                if (visibleCount === 0 && customerRows.length > 0) {
+                    noResultsDiv.classList.remove('d-none');
+                } else {
+                    noResultsDiv.classList.add('d-none');
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

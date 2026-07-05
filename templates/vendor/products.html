@@ -1,0 +1,250 @@
+{% extends 'base.html' %}
+
+{% block title %}My Products | FASTX Vendor{% endblock %}
+
+{% block content %}
+<div class="container py-4 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold mb-0">My Products Inventory</h3>
+            <p class="text-muted small">Manage your store listings, stock, and pricing.</p>
+        </div>
+        <div>
+            <a href="{% url 'vendor_dashboard' %}" class="btn btn-outline-dark rounded-pill px-4 shadow-sm me-2">Back</a>
+            <button type="button" class="btn btn-orange rounded-pill px-4 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                <i class="bi bi-plus-lg me-1"></i> Add Product
+            </button>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light text-muted small text-uppercase">
+                    <tr>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th>Price</th>
+                        <th>Stock</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in my_products %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                {% if product.image %}
+                                    <img src="{{ product.image.url }}" alt="{{ product.name }}" style="width: 45px; height: 45px; object-fit: cover;" class="rounded-3 me-3 border">
+                                {% elif product.image_url %}
+                                    <img src="{{ product.image_url }}" alt="{{ product.name }}" style="width: 45px; height: 45px; object-fit: cover;" class="rounded-3 me-3 border">
+                                {% else %}
+                                    <div class="bg-light rounded-3 me-3 border d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;"><i class="bi bi-box"></i></div>
+                                {% endif %}
+                                <span class="fw-bold">{{ product.name }}</span>
+                            </div>
+                        </td>
+                        <td>{{ product.category.name }}</td>
+                        <td class="fw-bold">₹{{ product.price }}</td>
+                        <td>
+                            {% if product.stock > 10 %}
+                                <span class="badge bg-success bg-opacity-10 text-success px-2 py-1">{{ product.stock }} in stock</span>
+                            {% elif product.stock > 0 %}
+                                <span class="badge bg-warning bg-opacity-10 text-warning px-2 py-1">{{ product.stock }} Low</span>
+                            {% else %}
+                                <span class="badge bg-danger bg-opacity-10 text-danger px-2 py-1">Out of Stock</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-light rounded-circle shadow-sm me-1" title="Edit"
+                                data-bs-toggle="modal" data-bs-target="#editProductModal"
+                                data-id="{{ product.id }}"
+                                data-name="{{ product.name }}"
+                                data-category="{{ product.category.id }}"
+                                data-price="{{ product.price }}"
+                                data-stock="{{ product.stock }}"
+                                data-available="{{ product.is_available }}"
+                                data-image="{{ product.image_url|default:'' }}"
+                                onclick="populateEditModal(this)">
+                                <i class="bi bi-pencil text-primary"></i>
+                            </button>
+                            
+                            <form action="{% url 'vendor_delete_product' product.id %}" method="POST" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-light rounded-circle shadow-sm text-danger" title="Delete" onclick="return confirm('Delete {{ product.name }} permanently?');">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="bi bi-shop fs-1 d-block mb-2 opacity-50"></i>
+                            Your store is empty. Add your first product to start selling!
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addProductModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 pb-0 pt-4 px-4">
+                <h5 class="modal-title fw-bold">Add New Product</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form action="{% url 'vendor_add_product' %}" method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Product Name</label>
+                            <input type="text" name="name" class="form-control bg-light border-0 py-2" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Category</label>
+                            <select name="category_id" class="form-select bg-light border-0 py-2" required>
+                                <option value="" disabled selected>Select Category</option>
+                                {% for cat in categories %}
+                                    <option value="{{ cat.id }}">{{ cat.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Price (₹)</label>
+                            <input type="number" step="0.01" name="price" class="form-control bg-light border-0 py-2" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Stock Quantity</label>
+                            <input type="number" name="stock" class="form-control bg-light border-0 py-2" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Availability</label>
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" name="is_available" checked>
+                                <label class="form-check-label">Active listing</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card border border-light bg-light rounded-3 p-3 mb-4">
+                        <h6 class="fw-bold mb-3"><i class="bi bi-image text-primary me-2"></i>Product Image</h6>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Upload from Computer</label>
+                            <input type="file" name="image_file" class="form-control border-0 shadow-sm" accept="image/*">
+                        </div>
+                        <div class="text-center text-muted small fw-bold mb-3">-- OR --</div>
+                        <div>
+                            <label class="form-label small fw-bold text-muted">Provide Image URL</label>
+                            <input type="url" name="image_url" class="form-control border-0 shadow-sm" placeholder="https://example.com/image.jpg">
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 border-top pt-3">
+                        <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-orange rounded-pill px-5 fw-bold shadow-sm">Save Product</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editProductModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 pb-0 pt-4 px-4">
+                <h5 class="modal-title fw-bold">Edit Product</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="editProductForm" method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Product Name</label>
+                            <input type="text" id="edit_name" name="name" class="form-control bg-light border-0 py-2" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Category</label>
+                            <select id="edit_category" name="category_id" class="form-select bg-light border-0 py-2" required>
+                                {% for cat in categories %}
+                                    <option value="{{ cat.id }}">{{ cat.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Price (₹)</label>
+                            <input type="number" id="edit_price" step="0.01" name="price" class="form-control bg-light border-0 py-2" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Stock Quantity</label>
+                            <input type="number" id="edit_stock" name="stock" class="form-control bg-light border-0 py-2" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Availability</label>
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" name="is_available" id="edit_is_available">
+                                <label class="form-check-label">Active listing</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card border border-light bg-light rounded-3 p-3 mb-4">
+                        <h6 class="fw-bold mb-3"><i class="bi bi-image text-primary me-2"></i>Update Image</h6>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Upload New File (Optional)</label>
+                            <input type="file" name="image_file" class="form-control border-0 shadow-sm" accept="image/*">
+                        </div>
+                        <div class="text-center text-muted small fw-bold mb-3">-- OR --</div>
+                        <div>
+                            <label class="form-label small fw-bold text-muted">Update Image URL</label>
+                            <input type="url" id="edit_image_url" name="image_url" class="form-control border-0 shadow-sm">
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 border-top pt-3">
+                        <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold shadow-sm">Update Product</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function populateEditModal(button) {
+    // Grab all the data from the button's data-* attributes
+    const id = button.getAttribute('data-id');
+    const name = button.getAttribute('data-name');
+    const catId = button.getAttribute('data-category');
+    const price = button.getAttribute('data-price');
+    const stock = button.getAttribute('data-stock');
+    const isAvailable = button.getAttribute('data-available');
+    const imgUrl = button.getAttribute('data-image');
+
+    // Dynamically set the form's action URL
+    document.getElementById('editProductForm').action = `/vendor-api/edit-product/${id}/`;
+    
+    // Fill the inputs with the extracted data
+    document.getElementById('edit_name').value = name;
+    document.getElementById('edit_category').value = catId;
+    document.getElementById('edit_price').value = price;
+    document.getElementById('edit_stock').value = stock;
+    document.getElementById('edit_is_available').checked = (isAvailable === 'True');
+    document.getElementById('edit_image_url').value = imgUrl;
+}
+</script>
+{% endblock %}

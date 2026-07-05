@@ -1,0 +1,308 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}FASTX Admin Control Center{% endblock %}
+
+{% block content %}
+<style>
+    body { background-color: #f4f7f6; }
+    .sidebar { min-height: 85vh; background: #fff; border-right: 1px solid #e0e0e0; padding-top: 20px; }
+    .nav-link { color: #495057; font-weight: 500; padding: 12px 20px; border-radius: 8px; margin-bottom: 5px; transition: all 0.3s; }
+    .nav-link:hover, .nav-link.active { background-color: #e9ecef; color: #0d6efd; }
+    .nav-link i { width: 25px; }
+    .metric-card { transition: transform 0.2s; cursor: pointer; text-decoration: none; color: inherit; }
+    .metric-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important; }
+    .clock-widget { font-family: 'Courier New', Courier, monospace; font-weight: bold; }
+</style>
+
+<!-- BULLETPROOF CSRF INJECTION -->
+<input type="hidden" id="secure-csrf-token" value="{{ csrf_token }}">
+
+<div class="container-fluid p-0">
+    <div class="row g-0">
+        <!-- 1. SIDEBAR NAVIGATION -->
+        <div class="col-md-2 sidebar px-3 d-none d-md-block shadow-sm">
+            <div class="text-center mb-4">
+                <img src="{% static 'images/logo1.png' %}" alt="FASTX Logo" class="img-fluid rounded-circle shadow-sm" style="width: 80px; height: 80px; object-fit: cover;">
+                <h5 class="fw-bold mt-2 text-navy">FASTX</h5>
+                <span class="badge bg-success rounded-pill">System Active ⚡</span>
+            </div>
+            
+            <nav class="nav flex-column">
+                <a class="nav-link active" href="{% url 'admin_dashboard' %}"><i class="bi bi-grid-1x2-fill"></i> Home Dashboard</a>
+                <a class="nav-link" href="{% url 'admin_manage_orders' %}"><i class="bi bi-box-seam"></i> Control All Orders 📦</a>
+                
+                <!-- Payment Ledger & Wallet -->
+                <a class="nav-link" href="{% url 'admin_payment_history' %}"><i class="bi bi-receipt"></i> Payment Ledger 💳</a>
+                <a class="nav-link text-success fw-bold" href="#" data-bs-toggle="modal" data-bs-target="#adminWalletModal"><i class="bi bi-wallet-fill text-success"></i> Customer Wallets 💵</a>
+                
+                <a class="nav-link" href="{% url 'admin_financials' %}"><i class="bi bi-cash-coin"></i> Monitor Revenue 💰</a>
+                <a class="nav-link" href="{% url 'manage_sellers' %}"><i class="bi bi-shop"></i> Manage Sellers 🏪</a>
+                <a class="nav-link" href="{% url 'manage_delivery_partners' %}"><i class="bi bi-truck"></i> Track Riders 🛵</a>
+                <a class="nav-link" href="{% url 'manage_promotions' %}"><i class="bi bi-megaphone"></i> Promos & Banners</a>
+                <a class="nav-link" href="{% url 'manage_coupons' %}"><i class="bi bi-ticket-perforated"></i> Manage Coupons 🎟️</a>
+                <a class="nav-link" href="{% url 'admin_feedback' %}"><i class="bi bi-chat-square-quote"></i> Solve Issues ⚡</a>
+                <a class="nav-link" href="{% url 'manage_categories' %}"><i class="bi bi-tags"></i> Categories</a>
+            </nav>
+        </div>
+
+        <!-- 2. MAIN CONTENT AREA -->
+        <div class="col-md-10 p-4">
+            
+            <!-- Header section with Profile and Clock -->
+            <div class="d-flex justify-content-between align-items-center mb-4 bg-white p-3 rounded-4 shadow-sm">
+                <div>
+                    <h2 class="fw-bold text-navy mb-0">Admin Home Dashboard</h2>
+                    <small class="text-muted">Welcome back, {{ request.user.get_full_name|default:"Super Admin" }}</small>
+                </div>
+                <div class="text-end">
+                    <div class="clock-widget text-primary fs-5" id="liveClock">Loading time...</div>
+                    <small class="text-muted" id="liveDate">Loading date...</small>
+                </div>
+            </div>
+
+            <!-- 3. CLICKABLE METRIC CARDS -->
+            <div class="row g-4 mb-5">
+                <!-- Total Orders -->
+                <div class="col-md-4 col-lg-2">
+                    <a href="{% url 'admin_manage_orders' %}" class="card border-0 shadow-sm rounded-4 text-center p-3 metric-card bg-light">
+                        <h6 class="text-muted text-uppercase mb-2" style="font-size: 0.8rem;">Total Orders</h6>
+                        <h3 class="fw-bold text-dark">{{ total_orders }}</h3>
+                    </a>
+                </div>
+                <!-- Completed Orders -->
+                <div class="col-md-4 col-lg-2">
+                    <a href="{% url 'admin_manage_orders' %}?status=Delivered" class="card border-0 shadow-sm rounded-4 text-center p-3 metric-card" style="background-color: #e8f5e9;">
+                        <h6 class="text-success text-uppercase mb-2" style="font-size: 0.8rem;">Completed</h6>
+                        <h3 class="fw-bold text-success">{{ completed_orders }}</h3>
+                    </a>
+                </div>
+                <!-- Cancelled Orders -->
+                <div class="col-md-4 col-lg-2">
+                    <a href="{% url 'admin_manage_orders' %}?status=Cancelled" class="card border-0 shadow-sm rounded-4 text-center p-3 metric-card" style="background-color: #ffebee;">
+                        <h6 class="text-danger text-uppercase mb-2" style="font-size: 0.8rem;">Cancelled</h6>
+                        <h3 class="fw-bold text-danger">{{ cancelled_orders }}</h3>
+                    </a>
+                </div>
+                <!-- WALLET CONTROL BUTTON (NEW) -->
+                <div class="col-md-4 col-lg-2">
+                    <div class="card border-0 shadow-sm rounded-4 text-center p-3 metric-card" style="background-color: #e8f5e9;" data-bs-toggle="modal" data-bs-target="#adminWalletModal">
+                        <h6 class="text-success text-uppercase mb-2" style="font-size: 0.8rem;">Wallet Control</h6>
+                        <h3 class="fw-bold text-success"><i class="bi bi-wallet-fill"></i></h3>
+                    </div>
+                </div>
+                <!-- Active Sellers -->
+                <div class="col-md-4 col-lg-2">
+                    <a href="{% url 'manage_sellers' %}" class="card border-0 shadow-sm rounded-4 text-center p-3 metric-card bg-light">
+                        <h6 class="text-muted text-uppercase mb-2" style="font-size: 0.8rem;">Active Sellers</h6>
+                        <h3 class="fw-bold text-warning">{{ active_sellers }}</h3>
+                    </a>
+                </div>
+                <!-- Total Revenue -->
+                <div class="col-md-4 col-lg-2">
+                    <a href="{% url 'admin_payment_history' %}" class="card border-0 shadow-sm rounded-4 text-center p-3 metric-card" style="background-color: #e3f2fd;">
+                        <h6 class="text-info text-uppercase mb-2" style="font-size: 0.8rem;">Revenue</h6>
+                        <h3 class="fw-bold text-info">₹{{ total_revenue|floatformat:2 }}</h3>
+                    </a>
+                </div>
+            </div>
+
+            <div class="alert alert-primary rounded-4 shadow-sm">
+                <i class="bi bi-info-circle me-2"></i> Select an option from the sidebar to view detailed analytics, verify documents, and manage financial transactions.
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ================================================== -->
+<!-- ADMIN WALLET MANAGEMENT MODAL -->
+<!-- ================================================== -->
+<div class="modal fade" id="adminWalletModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-bottom-0 pb-0 pt-4 px-4 position-relative">
+                <h5 class="fw-bold text-navy"><i class="bi bi-wallet-fill text-success me-2"></i>Manage Customer Wallet</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                
+                <!-- 1. Search Box -->
+                <div class="input-group mb-4 shadow-sm rounded overflow-hidden border">
+                    <span class="input-group-text bg-light border-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" id="walletSearchInput" class="form-control border-0 bg-light py-2 shadow-none" placeholder="Search by Phone Number or ID...">
+                    <button class="btn btn-dark px-4 fw-bold" onclick="searchCustomerWallet()">Search</button>
+                </div>
+                
+                <div id="walletSearchMsg" class="small text-danger fw-bold d-none mb-3"></div>
+
+                <!-- 2. Customer Details Area (Hidden until searched) -->
+                <div id="walletUserDetails" class="d-none transition-all">
+                    <div class="bg-light p-3 rounded-3 mb-4 border">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.65rem;">Customer Name</small>
+                                <strong class="fs-5 text-dark" id="walletUserName">John Doe</strong>
+                            </div>
+                            <span class="badge bg-dark bg-opacity-10 text-dark border">ID: #<span id="walletUserId"></span></span>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.65rem;">Phone Number</small>
+                            <span class="text-dark" id="walletUserPhone">+91 0000000000</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center bg-white p-3 rounded border border-success border-opacity-25 shadow-sm">
+                            <span class="fw-bold text-muted">Current Balance:</span>
+                            <strong class="fs-3 text-success">₹<span id="walletUserBalance">0.00</span></strong>
+                        </div>
+                    </div>
+
+                    <!-- 3. Action Area (Add/Remove) -->
+                    <h6 class="fw-bold small text-muted text-uppercase mb-2">Modify Balance</h6>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <div class="form-check border rounded p-2 ps-4 bg-light cursor-pointer">
+                                <input class="form-check-input" type="radio" name="walletAction" id="actionAdd" value="add" checked>
+                                <label class="form-check-label fw-bold text-success cursor-pointer" for="actionAdd"><i class="bi bi-plus-circle me-1"></i> Add Funds</label>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-check border rounded p-2 ps-4 bg-light cursor-pointer">
+                                <input class="form-check-input" type="radio" name="walletAction" id="actionRemove" value="remove">
+                                <label class="form-check-label fw-bold text-danger cursor-pointer" for="actionRemove"><i class="bi bi-dash-circle me-1"></i> Remove</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="input-group mb-4">
+                        <span class="input-group-text bg-white fw-bold fs-5">₹</span>
+                        <input type="number" id="walletAmountInput" class="form-control form-control-lg fw-bold" placeholder="0.00" min="1">
+                    </div>
+
+                    <button class="btn btn-navy w-100 rounded-pill py-3 fw-bold shadow-sm" onclick="processWalletUpdate()">Confirm Transaction</button>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Live Clock Script
+    function updateClock() {
+        const now = new Date();
+        const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        
+        document.getElementById('liveClock').innerText = now.toLocaleTimeString('en-IN', timeOptions);
+        document.getElementById('liveDate').innerText = now.toLocaleDateString('en-IN', dateOptions);
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // ==========================================
+    // ADMIN WALLET MANAGEMENT SCRIPTS
+    // ==========================================
+    let currentWalletUserId = null;
+
+    function searchCustomerWallet() {
+        let query = document.getElementById('walletSearchInput').value.trim();
+        let msgBox = document.getElementById('walletSearchMsg');
+        let detailsBox = document.getElementById('walletUserDetails');
+        
+        if(!query) {
+            msgBox.innerText = "Please enter a Phone Number or ID.";
+            msgBox.classList.remove('d-none');
+            detailsBox.classList.add('d-none');
+            return;
+        }
+
+        msgBox.classList.add('d-none');
+        
+        // Call the API
+        fetch(`/admin-api/wallet/search/?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) {
+                currentWalletUserId = data.user_id;
+                document.getElementById('walletUserName').innerText = data.name;
+                document.getElementById('walletUserId').innerText = data.user_id;
+                document.getElementById('walletUserPhone').innerText = data.phone;
+                document.getElementById('walletUserBalance').innerText = parseFloat(data.balance).toFixed(2);
+                
+                document.getElementById('walletAmountInput').value = '';
+                detailsBox.classList.remove('d-none');
+            } else {
+                msgBox.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1"></i> ${data.message || data.error || 'Customer not found.'}`;
+                msgBox.classList.remove('d-none');
+                detailsBox.classList.add('d-none');
+            }
+        })
+        .catch(err => {
+            msgBox.innerText = "Network error. Please try again.";
+            msgBox.classList.remove('d-none');
+        });
+    }
+
+    function processWalletUpdate() {
+        if(!currentWalletUserId) return;
+        
+        let amountInput = document.getElementById('walletAmountInput');
+        // Force strict float parsing to prevent strings from breaking the backend
+        let amount = parseFloat(amountInput.value);
+        
+        let actionElem = document.querySelector('input[name="walletAction"]:checked');
+        if(!actionElem) { 
+            alert("Please select Add or Remove."); 
+            return; 
+        }
+        let action = actionElem.value;
+        let secureCsrfToken = document.getElementById('secure-csrf-token').value;
+        
+        if(isNaN(amount) || amount <= 0) {
+            alert("Please enter a valid amount greater than zero.");
+            return;
+        }
+
+        if(confirm(`Are you sure you want to ${action.toUpperCase()} ₹${amount} to/from this wallet?`)) {
+            
+            // Pack the data strictly
+            const requestData = {
+                "action": action,
+                "amount": amount
+            };
+
+            fetch(`/admin-api/wallet/update/${currentWalletUserId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': secureCsrfToken 
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(async response => {
+                const text = await response.text(); // Get raw text to see if it's an HTML error page
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    throw new Error("Server crashed or returned invalid JSON. Server Response: \n\n" + text.substring(0, 200));
+                }
+            })
+            .then(data => {
+                if(data.success) {
+                    // Update balance on screen instantly
+                    document.getElementById('walletUserBalance').innerText = parseFloat(data.new_balance).toFixed(2);
+                    amountInput.value = '';
+                    alert(data.message);
+                } else {
+                    // Safely catches ANY error thrown by our backend
+                    alert("Failed: " + (data.message || data.error || "Unknown error"));
+                }
+            })
+            .catch(err => {
+                console.error("Wallet Update Debug:", err);
+                alert("Error: " + err.message);
+            });
+        }
+    }
+</script>
+{% endblock %}

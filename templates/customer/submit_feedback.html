@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Leave Feedback | FASTX{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="bg-navy p-4 text-white text-center" style="background: var(--fastx-navy);">
+                    <h3 class="fw-bold mb-0">How was your delivery?</h3>
+                    <p class="text-white-50 mb-0 mt-1">Order #FX-{{ order.id }}</p>
+                </div>
+                
+                <div class="card-body p-4 p-md-5">
+                    <form method="POST">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4 text-center">
+                            <h6 class="fw-bold text-muted text-uppercase mb-3">Overall FASTX Experience</h6>
+                            <div class="d-flex justify-content-between px-3 mb-2 text-warning fs-4">
+                                <span><i class="bi bi-star"></i></span>
+                                <span><i class="bi bi-star"></i></span>
+                                <span><i class="bi bi-star"></i></span>
+                                <span><i class="bi bi-star"></i></span>
+                                <span><i class="bi bi-star-fill"></i></span>
+                            </div>
+                            <input type="range" name="rating" class="form-range" min="1" max="5" step="1" value="5" id="platformRating">
+                            <div class="d-flex justify-content-between small text-muted">
+                                <span>Poor</span>
+                                <span id="platformRatingVal" class="fw-bold text-dark">5 Stars</span>
+                                <span>Excellent</span>
+                            </div>
+                        </div>
+
+                        <hr class="opacity-25 mb-4">
+
+                        <div class="mb-4 text-center">
+                            <h6 class="fw-bold text-muted text-uppercase mb-3">Delivery Partner Rating</h6>
+                            <div class="d-flex align-items-center justify-content-center mb-3">
+                                <div class="bg-light rounded-circle p-3 me-3">
+                                    <i class="bi bi-scooter fs-2 text-primary"></i>
+                                </div>
+                                <div class="text-start">
+                                    <strong class="d-block">{{ order.rider.get_full_name|default:"Your Rider" }}</strong>
+                                    <small class="text-muted">Delivered your items</small>
+                                </div>
+                            </div>
+                            
+                            <input type="range" name="rider_rating" class="form-range" min="1" max="5" step="1" value="5" id="riderRating">
+                            <div class="d-flex justify-content-between small text-muted mt-2">
+                                <span>Poor</span>
+                                <span id="riderRatingVal" class="fw-bold text-dark">5 Stars</span>
+                                <span>Excellent</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-muted small text-uppercase">Additional Comments</label>
+                            <textarea name="comment" class="form-control bg-light border-0" rows="4" placeholder="Tell us what you loved, or what we can improve..."></textarea>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-warning btn-lg fw-bold rounded-pill shadow-sm">
+                                Submit Feedback <i class="bi bi-send-fill ms-2"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Simple script to update the text when sliders move
+    document.getElementById('platformRating').addEventListener('input', function(e) {
+        document.getElementById('platformRatingVal').innerText = e.target.value + ' Stars';
+    });
+    document.getElementById('riderRating').addEventListener('input', function(e) {
+        document.getElementById('riderRatingVal').innerText = e.target.value + ' Stars';
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,278 @@
+{% extends 'base.html' %}
+
+{% block title %}FASTX | Secure Unified Login{% endblock %}
+
+{% block content %}
+<div class="container py-5 mt-4 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-xl-10 col-lg-11">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="row g-0">
+                    
+                    <div class="col-md-5 d-none d-md-flex flex-column justify-content-between p-5 text-white" 
+                         style="background: linear-gradient(145deg, var(--fastx-navy) 0%, #112d5e 100%); position: relative; overflow: hidden;">
+                        
+                        <div class="position-absolute" style="top: -10%; left: -10%; width: 300px; height: 300px; background: radial-gradient(circle, rgba(79, 195, 247, 0.15) 0%, transparent 70%); border-radius: 50%;"></div>
+                        <div class="position-absolute" style="bottom: -10%; right: -10%; width: 250px; height: 250px; background: radial-gradient(circle, rgba(255, 107, 0, 0.15) 0%, transparent 70%); border-radius: 50%;"></div>
+                        
+                        <div class="position-relative z-1">
+                            <h2 class="fw-bold mb-3"><i class="bi bi-lightning-charge-fill text-warning"></i> FAST<span style="color: var(--fastx-sky);">X</span></h2>
+                            <p class="lead fw-medium opacity-75">Your Hyperlocal Ecosystem.</p>
+                        </div>
+                        
+                        <div class="position-relative z-1 mb-4">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-white bg-opacity-10 p-2 rounded-circle me-3"><i class="bi bi-shop-window fs-5 text-white"></i></div>
+                                <div><h6 class="mb-0 fw-bold">Shop & Save</h6><small class="opacity-75">10-minute grocery delivery</small></div>
+                            </div>
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-white bg-opacity-10 p-2 rounded-circle me-3"><i class="bi bi-graph-up-arrow fs-5 text-white"></i></div>
+                                <div><h6 class="mb-0 fw-bold">Grow Your Business</h6><small class="opacity-75">Powerful vendor tools</small></div>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <div class="bg-white bg-opacity-10 p-2 rounded-circle me-3"><i class="bi bi-shield-check fs-5 text-white"></i></div>
+                                <div><h6 class="mb-0 fw-bold">Admin Control</h6><small class="opacity-75">Secure platform management</small></div>
+                            </div>
+                        </div>
+                        
+                        <div class="position-relative z-1 small opacity-50">
+                            &copy; 2026 FASTX Technologies
+                        </div>
+                    </div>
+
+                    <div class="col-md-7 p-4 p-md-5 bg-white">
+                        <div class="text-center text-md-start mb-4 pb-2">
+                            <h3 class="fw-bold text-dark mb-1">Welcome Back</h3>
+                            <p class="text-muted">Sign in to your FASTX account to continue</p>
+                        </div>
+
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-danger d-flex align-items-center rounded-3 small fw-bold py-3 shadow-sm border-0 bg-danger bg-opacity-10 text-danger" role="alert">
+                                    <i class="bi bi-exclamation-triangle-fill fs-5 me-2"></i> 
+                                    <div>{{ message }}</div>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <form method="POST" action="{% url 'unified_login' %}" id="loginForm">
+                            {% csrf_token %}
+                            
+                            <div class="input-group shadow-sm rounded overflow-hidden border bg-light mb-3">
+                                <div class="form-floating flex-grow-1">
+                                    <input type="text" name="login_id" id="loginIdInput" class="form-control border-0 bg-transparent shadow-none" placeholder="Phone Number" required oninput="handleLoginIdChange()">
+                                    <label for="loginIdInput" class="text-muted"><i class="bi bi-person-circle me-2"></i>Phone Number</label>
+                                </div>
+                                <button type="button" class="btn btn-dark fw-bold px-3 m-1 rounded d-none" id="btn-send-otp" onclick="requestOTP()">Get OTP</button>
+                            </div>
+
+                            <div class="mb-3 p-3 bg-light border border-primary border-opacity-25 rounded-4 d-none transition-all" id="otp-block">
+                                <label class="form-label text-primary fw-bold small"><i class="bi bi-chat-text me-1"></i> Enter 6-Digit OTP</label>
+                                <div class="input-group shadow-sm rounded-pill overflow-hidden border bg-white">
+                                    <input type="text" id="otp_input" class="form-control border-0 text-center fw-bold letter-spacing-2 py-2 shadow-none" placeholder="• • • • • •" maxlength="6" autocomplete="one-time-code">
+                                    <button type="button" class="btn btn-success fw-bold px-4" id="btn-verify-otp" onclick="verifyOTP()">Verify</button>
+                                </div>
+                                <div class="text-center mt-2" id="otp-timer-text">
+                                    <small class="text-muted">OTP sent to your mobile via SMS.</small>
+                                </div>
+                            </div>
+
+                            <div class="form-floating mb-2 position-relative shadow-sm rounded border overflow-hidden bg-light">
+                                <input type="password" name="password" id="passwordInput" class="form-control border-0 bg-transparent shadow-none" placeholder="Password" required oninput="checkFormValidity()">
+                                <label for="passwordInput" class="text-muted"><i class="bi bi-key me-2"></i>Password</label>
+                                
+                                <button type="button" id="togglePassword" class="btn border-0 bg-transparent position-absolute top-50 end-0 translate-middle-y me-2 text-muted" style="z-index: 5;">
+                                    <i class="bi bi-eye-slash-fill" id="eyeIcon"></i>
+                                </button>
+                            </div>
+
+                            <div class="d-flex justify-content-end mb-4">
+                                <a href="{% url 'forgot_password' %}" class="small fw-medium text-decoration-none" style="color: var(--fastx-sky);">Forgot Password?</a>
+                            </div>
+
+                            <button type="submit" id="final-submit-btn" class="btn btn-orange w-100 py-3 fw-bold fs-5 shadow-sm rounded-pill mb-4 transition-all hover-lift" disabled>
+                                Secure Sign In <i class="bi bi-arrow-right ms-2"></i>
+                            </button>
+                        </form>
+
+                        <div class="text-center mt-2 border-top pt-4">
+                            <p class="text-muted small mb-3">No account yet?</p>
+                            <a href="{% url 'customer_register' %}" class="btn btn-outline-dark rounded-pill px-5 py-2 fw-bold">
+                                <i class="bi bi-person-plus me-1"></i> Create Profile
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-control:focus {
+        border-color: var(--fastx-navy) !important;
+        box-shadow: 0 0 0 0.25rem rgba(10, 31, 68, 0.1) !important;
+    }
+    .hover-lift {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .hover-lift:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(255, 107, 0, 0.2) !important;
+    }
+    .letter-spacing-2 { letter-spacing: 0.25rem; }
+</style>
+
+<script>
+    let isOtpVerified = false;
+    let lastVerifiedPhone = "";
+
+    // --- 1. DYNAMIC INPUT HANDLER (Email vs Phone) ---
+    function handleLoginIdChange() {
+        const val = document.getElementById('loginIdInput').value.trim();
+        const otpBtn = document.getElementById('btn-send-otp');
+        const otpBlock = document.getElementById('otp-block');
+
+        // Check if user is typing an Email (Admin bypass)
+        if (val.includes('@')) {
+            otpBtn.classList.add('d-none');
+            otpBlock.classList.add('d-none');
+            isOtpVerified = true; 
+        } 
+        // Else, it's treated as a Phone Number
+        else {
+            // Keep verified state if they haven't changed the number
+            isOtpVerified = (val === lastVerifiedPhone && lastVerifiedPhone !== "");
+            
+            // Show "Get OTP" button only if it's exactly 10 digits and not verified
+            if (/^\d{10}$/.test(val)) {
+                if (!isOtpVerified) {
+                    otpBtn.classList.remove('d-none');
+                } else {
+                    otpBtn.classList.add('d-none');
+                }
+            } else {
+                otpBtn.classList.add('d-none');
+                otpBlock.classList.add('d-none');
+            }
+        }
+        checkFormValidity();
+    }
+
+    // --- 2. OTP LOGIC ---
+    function requestOTP() {
+        let phone = document.getElementById('loginIdInput').value.trim();
+        let btn = document.getElementById('btn-send-otp');
+        
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        btn.disabled = true;
+        
+        fetch('/api/send-otp/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+            body: JSON.stringify({phone: phone, action: 'login'})
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) {
+                document.getElementById('otp-block').classList.remove('d-none');
+                btn.innerHTML = 'Resend';
+                btn.classList.replace('btn-dark', 'btn-outline-secondary');
+                btn.disabled = false;
+            } else {
+                alert(data.error || "Failed to send OTP.");
+                btn.innerHTML = 'Get OTP';
+                btn.disabled = false;
+            }
+        })
+        .catch(err => {
+            alert("Network error occurred.");
+            btn.innerHTML = 'Get OTP';
+            btn.disabled = false;
+        });
+    }
+
+    function verifyOTP() {
+        let phone = document.getElementById('loginIdInput').value.trim();
+        let otp = document.getElementById('otp_input').value.trim();
+        let btn = document.getElementById('btn-verify-otp');
+        
+        if(otp.length !== 6) { alert("Enter 6-digit OTP."); return; }
+        
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        btn.disabled = true;
+
+        fetch('/api/verify-otp/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+            body: JSON.stringify({phone: phone, otp: otp})
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) {
+                isOtpVerified = true;
+                lastVerifiedPhone = phone;
+                
+                document.getElementById('otp-block').innerHTML = '<div class="text-center p-2"><h6 class="text-success fw-bold mb-0"><i class="bi bi-check-circle-fill me-2"></i> Mobile Number Verified</h6></div>';
+                document.getElementById('btn-send-otp').classList.add('d-none');
+                document.getElementById('loginIdInput').readOnly = true; // Lock the phone number
+                
+                checkFormValidity();
+            } else {
+                alert(data.error || "Invalid OTP code.");
+                btn.innerHTML = 'Verify';
+                btn.disabled = false;
+            }
+        })
+        .catch(err => {
+            alert("Network error occurred.");
+            btn.innerHTML = 'Verify';
+            btn.disabled = false;
+        });
+    }
+
+    // --- 3. FORM VALIDATION ---
+    // --- 3. FORM VALIDATION ---
+    function checkFormValidity() {
+        const loginId = document.getElementById('loginIdInput').value.trim();
+        const pwd = document.getElementById('passwordInput').value;
+        const submitBtn = document.getElementById('final-submit-btn');
+        
+        let isValidId = false;
+        
+        // ADMIN PATH: Needs Email + Password
+        if (loginId.includes('@')) {
+            if (pwd.length > 0) isValidId = true;
+        } 
+        // USER PATH: Needs Phone Verified + Password (optional)
+        else if (isOtpVerified) {
+            isValidId = true; // Password is no longer strictly required for OTP login
+        }
+
+        // Enable Submit if the path is valid
+        submitBtn.disabled = !isValidId;
+    }
+
+    // --- 4. PASSWORD TOGGLE ---
+    document.addEventListener("DOMContentLoaded", function() {
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('passwordInput');
+        const eyeIcon = document.getElementById('eyeIcon');
+
+        if(togglePassword && passwordInput) {
+            togglePassword.addEventListener('click', function (e) {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                
+                if(type === 'text') {
+                    eyeIcon.classList.replace('bi-eye-slash-fill', 'bi-eye-fill');
+                    eyeIcon.classList.add('text-primary');
+                } else {
+                    eyeIcon.classList.replace('bi-eye-fill', 'bi-eye-slash-fill');
+                    eyeIcon.classList.remove('text-primary');
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

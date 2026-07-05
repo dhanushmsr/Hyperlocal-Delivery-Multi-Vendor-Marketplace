@@ -1,0 +1,295 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Manage Delivery Partners{% endblock %}
+
+{% block content %}
+<style>
+    .table-hover tbody tr { cursor: pointer; transition: background-color 0.2s; }
+    .table-hover tbody tr:hover { background-color: rgba(10, 31, 68, 0.05); }
+    .offcanvas { width: 450px !important; }
+    .status-badge { font-weight: 500; letter-spacing: 0.5px; }
+</style>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold text-navy">
+            <i class="bi bi-truck me-2 text-orange"></i>Delivery Partners Management
+        </h2>
+        <div>
+            <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-secondary rounded-pill shadow-sm">
+                <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-5">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                <h6 class="text-muted text-uppercase mb-2 tracking-wide">Total Partners</h6>
+                <h3 class="fw-bold text-dark">{{ total_partners_count }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                <h6 class="text-muted text-uppercase mb-2 tracking-wide">Pending Approval</h6>
+                <h3 class="fw-bold text-warning">{{ pending_approval_count }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                <h6 class="text-muted text-uppercase mb-2 tracking-wide">Active Partners</h6>
+                <h3 class="fw-bold text-success">{{ active_partners_count }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                <h6 class="text-muted text-uppercase mb-2 tracking-wide">Blocked</h6>
+                <h3 class="fw-bold text-danger">{{ blocked_partners_count }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 h-100">
+        <div class="card-header bg-white border-0 pt-4 pb-0">
+            <h5 class="fw-bold"><i class="bi bi-list-check text-primary me-2"></i>Partner Directory</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="py-3 ps-4">Partner ID</th>
+                            <th>Name & Contact</th>
+                            <th>License Number</th>
+                            <th>Total Deliveries</th>
+                            <th>Current Status</th>
+                            <th class="text-end pe-4">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for partner in delivery_partners %}
+                        <tr data-bs-toggle="offcanvas" data-bs-target="#partnerProfile{{ partner.id }}">
+                            <td class="ps-4 fw-bold text-muted">#{{ partner.id }}</td>
+                            <td>
+                                <strong class="text-dark fs-6 d-block">{{ partner.user.get_full_name|default:partner.user.username }}</strong>
+                                <small class="text-muted">{{ partner.phone_number }}</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border">{{ partner.license_number|default:"Not Provided" }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-info bg-opacity-10 text-info border border-info rounded-pill px-3">{{ partner.total_deliveries }}</span>
+                            </td>
+                            <td>
+                                {% if not partner.is_approved %}
+                                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning rounded-pill px-3 py-1">Pending Approval</span>
+                                {% elif partner.user.is_active %}
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-3 py-1">Active</span>
+                                {% else %}
+                                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger rounded-pill px-3 py-1">Blocked</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end pe-4">
+                                <button class="btn btn-sm btn-light rounded-circle shadow-sm text-primary">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </td>
+                        </tr>
+
+                        <div class="offcanvas offcanvas-end shadow" tabindex="-1" id="partnerProfile{{ partner.id }}" aria-labelledby="offcanvasRightLabel{{ partner.id }}">
+                            <div class="offcanvas-header bg-light border-bottom">
+                                <h5 class="offcanvas-title fw-bold text-navy" id="offcanvasRightLabel{{ partner.id }}">
+                                    <i class="bi bi-person-badge me-2"></i> Partner Profile
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                            </div>
+                            <div class="offcanvas-body">
+                                
+                                <div class="text-center mb-4 pt-3">
+                                    {% if partner.profile_photo %}
+                                        <img src="{{ partner.profile_photo.url }}" 
+                                             alt="{{ partner.user.get_full_name }}" 
+                                             class="rounded-circle shadow-sm border border-2 border-white mb-3" 
+                                             style="width: 80px; height: 80px; object-fit: cover;">
+                                    {% else %}
+                                        <div class="bg-light text-dark border rounded-circle d-inline-flex align-items-center justify-content-center mb-3 shadow-sm" 
+                                             style="width: 80px; height: 80px; font-size: 2.5rem; font-weight: bold;">
+                                            {{ partner.user.first_name|slice:":1"|upper|default:"R" }}
+                                        </div>
+                                    {% endif %}
+
+                                    <h4 class="fw-bold mb-1">{{ partner.user.get_full_name|default:partner.user.username }}</h4>
+                                    <p class="text-muted mb-2">Delivery Partner</p>
+                                    
+                                    <div>
+                                        {% if not partner.is_approved %}
+                                            <span class="badge bg-warning text-dark px-3 py-2 rounded-pill"><i class="bi bi-hourglass-split me-1"></i> Pending Verification</span>
+                                        {% elif partner.user.is_active %}
+                                            <span class="badge bg-success px-3 py-2 rounded-pill"><i class="bi bi-shield-check me-1"></i> Active Partner</span>
+                                        {% else %}
+                                            <span class="badge bg-danger px-3 py-2 rounded-pill"><i class="bi bi-slash-circle me-1"></i> Account Blocked</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <hr class="border-secondary opacity-25">
+
+                                <div class="mb-4">
+                                    <h6 class="fw-bold text-uppercase text-muted small mb-3 tracking-wide">Contact Information</h6>
+                                    <div class="d-flex mb-3">
+                                        <i class="bi bi-envelope text-primary fs-5 me-3"></i>
+                                        <div>
+                                            <span class="d-block small text-muted">Email Address</span>
+                                            <span class="fw-medium">{{ partner.user.email|default:"Not Provided" }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex mb-3">
+                                        <i class="bi bi-telephone text-primary fs-5 me-3"></i>
+                                        <div>
+                                            <span class="d-block small text-muted">Phone Number</span>
+                                            <span class="fw-medium">{{ partner.phone_number|default:"Not Provided" }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-4">
+                                    <h6 class="fw-bold text-uppercase text-muted small mb-3 tracking-wide">Partner Details</h6>
+                                    <div class="card bg-light border-0 p-3 mb-4 rounded-4 shadow-sm">
+                                        <p class="mb-1 small"><strong class="text-muted">License:</strong> {{ partner.license_number|default:"N/A" }}</p>
+                                        <p class="mb-1 small"><strong class="text-muted">Vehicle:</strong> {{ partner.vehicle_type }}</p>
+                                        <p class="mb-0 small"><strong class="text-muted">Total Deliveries:</strong> <span class="text-success fw-bold">{{ partner.total_deliveries }}</span></p>
+                                    </div>
+                                    
+                                    <h6 class="fw-bold text-uppercase text-muted small mb-3 tracking-wide">Bank Account Information</h6>
+                                    <div class="card bg-white border border-primary border-opacity-25 p-3 rounded-4 shadow-sm">
+                                        <div class="row g-3">
+                                            <div class="col-sm-12">
+                                                <span class="d-block small text-muted">Bank Name</span>
+                                                <span class="fw-medium text-dark">{{ partner.bank_name|default:"Not Provided" }}</span>
+                                            </div>
+                                            <div class="col-sm-12">
+                                                <span class="d-block small text-muted">Account Holder Name</span>
+                                                <span class="fw-medium text-dark">{{ partner.bank_account_name|default:"Not Provided" }}</span>
+                                            </div>
+                                            <div class="col-sm-12">
+                                                <span class="d-block small text-muted">Account Number</span>
+                                                <span class="fw-medium text-dark">{{ partner.bank_account_number|default:"Not Provided" }}</span>
+                                            </div>
+                                            <div class="col-sm-12">
+                                                <span class="d-block small text-muted">IFSC Code</span>
+                                                <span class="fw-medium text-dark">{{ partner.ifsc_code|default:"Not Provided" }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="card bg-light border-0 p-3 shadow-sm rounded-4 mb-4">
+                                    <h6 class="fw-bold mb-3"><i class="bi bi-folder-check text-primary me-2"></i>Verification Documents</h6>
+                                    <div class="row g-2">
+                                        <div class="col-12">
+                                            {% if partner.license_photo %}
+                                            <a href="{% url 'admin_view_doc' 'rider_license' partner.user.id %}" target="_blank" class="btn btn-outline-dark w-100 rounded-pill text-start ps-3">
+                                                <i class="bi bi-card-heading me-2"></i> View Driving License
+                                            </a>
+                                            {% else %}
+                                            <button class="btn btn-outline-secondary w-100 rounded-pill text-start ps-3" disabled>
+                                                <i class="bi bi-file-earmark-x me-2"></i> No License Uploaded
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-12">
+                                            {% if partner.passbook_photo %}
+                                            <a href="{% url 'admin_view_doc' 'rider_passbook' partner.user.id %}" target="_blank" class="btn btn-outline-dark w-100 rounded-pill text-start ps-3">
+                                                <i class="bi bi-bank me-2"></i> View Passbook / Cheque
+                                            </a>
+                                            {% else %}
+                                            <button class="btn btn-outline-secondary w-100 rounded-pill text-start ps-3" disabled>
+                                                <i class="bi bi-file-earmark-x me-2"></i> No Passbook Uploaded
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-auto pt-4 border-top">
+                                    <h6 class="fw-bold text-uppercase text-muted small mb-3 tracking-wide">Access Control</h6>
+                                    <div class="d-grid gap-2">
+                                        {% if not partner.is_approved %}
+                                            <button class="btn btn-success fw-bold py-2 shadow-sm action-btn" data-id="{{ partner.id }}" data-action="Approve">
+                                                <i class="bi bi-check-circle me-2"></i> Approve Application
+                                            </button>
+                                            <button class="btn btn-outline-danger fw-bold py-2 action-btn" data-id="{{ partner.id }}" data-action="Reject">
+                                                <i class="bi bi-x-circle me-2"></i> Reject Application
+                                            </button>
+                                        {% elif partner.user.is_active %}
+                                            <button class="btn btn-warning text-dark fw-bold py-2 shadow-sm action-btn" data-id="{{ partner.id }}" data-action="Block">
+                                                <i class="bi bi-slash-circle me-2"></i> Suspend Partner
+                                            </button>
+                                        {% else %}
+                                            <button class="btn btn-success fw-bold py-2 shadow-sm action-btn" data-id="{{ partner.id }}" data-action="Unblock">
+                                                <i class="bi bi-unlock me-2"></i> Unblock Partner
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-5">
+                                <i class="bi bi-truck fs-1 d-block mb-2 opacity-25"></i> 
+                                No delivery partners found.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<input type="hidden" name="csrfmiddlewaretoken" id="csrfToken" value="{{ csrf_token }}">
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const actionButtons = document.querySelectorAll('.action-btn');
+        const csrfToken = document.getElementById('csrfToken').value;
+
+        actionButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const partnerId = this.getAttribute('data-id');
+                const action = this.getAttribute('data-action');
+                
+                if(!confirm(`Are you sure you want to ${action.toUpperCase()} this delivery partner?`)) {
+                    return;
+                }
+
+                fetch(`/admin-api/delivery-partner/update-status/${partnerId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ action: action })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if(data.success) {
+                        alert(`Partner successfully updated to ${data.new_status}.`);
+                        window.location.reload(); 
+                    } else {
+                        alert('Failed to update status: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('A network error occurred.');
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}

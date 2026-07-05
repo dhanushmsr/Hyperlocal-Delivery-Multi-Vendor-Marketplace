@@ -1,0 +1,509 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}FASTX | India's Fastest Delivery Network{% endblock %}
+
+{% block content %}
+<style>
+    /* =========================================
+       1. INNOVATIVE HERO SECTION STYLES
+       ========================================= */
+    .hero-innovative {
+        padding-top: 120px;
+        padding-bottom: 140px;
+        position: relative;
+        overflow: hidden;
+        /* Dynamic Animated Gradient Background */
+        background: linear-gradient(-45deg, #0A1F44, #1e3a8a, #FF6B00, #0A1F44);
+        background-size: 400% 400%;
+        animation: gradientFlow 15s ease infinite;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    @keyframes gradientFlow {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+
+    /* Abstract Tech Overlay */
+    .hero-innovative::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjEpIi8+PC9zdmc+') repeat;
+        z-index: 1;
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 5;
+    }
+
+    /* Typewriter Effect Styling */
+    .typewriter-text {
+        color: #4FC3F7; /* FASTX Sky Blue */
+        border-right: 3px solid #4FC3F7;
+        padding-right: 5px;
+        animation: blinkCursor 0.75s step-end infinite;
+    }
+    @keyframes blinkCursor { from, to { border-color: transparent } 50% { border-color: #4FC3F7; } }
+
+    /* Glassmorphism Floating Elements */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        border-radius: 20px;
+    }
+    
+    .float-slow { animation: floatSlow 6s ease-in-out infinite; }
+    .float-fast { animation: floatFast 4s ease-in-out infinite reverse; }
+
+    @keyframes floatSlow {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-20px); }
+    }
+    @keyframes floatFast {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-15px) rotate(2deg); }
+    }
+
+    /* Live Tracker Mockup Widget */
+    .live-tracker-widget {
+        position: absolute;
+        top: 15%;
+        right: -10%;
+        padding: 15px 25px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        z-index: 10;
+    }
+    .pulsing-dot {
+        width: 12px; height: 12px;
+        background-color: #10B981;
+        border-radius: 50%;
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+        animation: pulseGreen 2s infinite;
+    }
+    @keyframes pulseGreen {
+        0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+        70% { box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    /* =========================================
+       2. MODERN CATEGORY SCROLLER
+       ========================================= */
+    .category-scroll-container {
+        display: flex;
+        overflow-x: auto;
+        gap: 20px;
+        padding: 20px 5px 40px 5px;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none;  /* IE and Edge */
+    }
+    .category-scroll-container::-webkit-scrollbar {
+        display: none; /* Chrome, Safari and Opera */
+    }
+    
+    .category-card {
+        flex: 0 0 auto;
+        width: 180px;
+        height: 220px;
+        border-radius: 24px;
+        position: relative;
+        overflow: hidden;
+        scroll-snap-align: start;
+        cursor: pointer;
+        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+        text-decoration: none;
+        display: block;
+    }
+    .category-card:hover {
+        transform: translateY(-12px) scale(1.03);
+        box-shadow: 0 20px 30px rgba(255, 107, 0, 0.2);
+    }
+    .category-card img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.5s ease;
+    }
+    .category-card:hover img {
+        transform: scale(1.1);
+    }
+    .category-overlay {
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        background: linear-gradient(to top, rgba(10, 31, 68, 0.95) 0%, rgba(10, 31, 68, 0) 100%);
+        padding: 30px 15px 15px 15px;
+        text-align: center;
+    }
+    .category-overlay h6 {
+        color: #ffffff;
+        font-weight: 800;
+        margin: 0;
+        font-size: 1.1rem;
+        letter-spacing: 0.5px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    /* =========================================
+       3. PROMO CAROUSEL (NO ARROWS)
+       ========================================= */
+    .promo-carousel-wrapper {
+        border-radius: 2rem;
+        overflow: hidden;
+        box-shadow: 0 25px 50px rgba(10, 31, 68, 0.15);
+        background-color: #0A1F44;
+    }
+    .promo-carousel-media {
+        width: 100%;
+        height: auto;
+        max-height: 550px;
+        object-fit: contain;
+        display: block;
+        margin: 0 auto;
+    }
+    .carousel-caption-custom {
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        padding: 50px 40px 30px 40px;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0) 100%);
+        text-align: left;
+        pointer-events: none;
+    }
+    /* Elegant active indicators */
+    .carousel-indicators [data-bs-target] {
+        background-color: rgba(255, 255, 255, 0.5);
+        height: 6px;
+        border-radius: 4px;
+        width: 30px;
+        transition: all 0.3s ease;
+        border: none;
+    }
+    .carousel-indicators .active {
+        background-color: var(--fastx-orange);
+        width: 60px;
+    }
+
+    /* =========================================
+       4. STATS WIDGET OVERLAP
+       ========================================= */
+    .stats-overlap {
+        margin-top: -60px;
+        position: relative;
+        z-index: 10;
+    }
+</style>
+
+<!-- ==========================================
+     INNOVATIVE HERO SECTION
+     ========================================== -->
+<div class="container-fluid px-0 hero-innovative text-white">
+    <div class="container hero-content">
+        <div class="row align-items-center">
+            
+            <!-- Left Text & CTAs -->
+            <div class="col-lg-6 text-center text-lg-start mb-5 mb-lg-0">
+                <div class="d-inline-flex align-items-center glass-card px-3 py-2 rounded-pill mb-4 border border-white border-opacity-25">
+                    <span class="pulsing-dot me-2"></span>
+                    <span class="fw-bold small text-uppercase tracking-wide">Live Across India</span>
+                </div>
+                
+                <h1 class="display-3 fw-bold mb-3" style="line-height: 1.2;">
+                    Delivering <br>
+                    <span class="typewriter-text" id="typewriter">Groceries</span><br>
+                    in 10 Minutes.
+                </h1>
+                
+                <p class="lead mb-5 opacity-75 pe-lg-5 fw-light">
+                    Experience the future of commerce. From daily essentials to local retail, FASTX brings the city to your doorstep faster than ever before.
+                </p>
+                
+                <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center justify-content-lg-start">
+                    <a href="{% url 'customer_home' %}" class="btn btn-warning btn-lg fw-bold px-5 rounded-pill shadow-lg hover-scale" style="color: var(--fastx-navy); padding-top: 14px; padding-bottom: 14px;">
+                        Explore Store <i class="bi bi-arrow-right-circle ms-2"></i>
+                    </a>
+                    <a href="{% url 'unified_login' %}" class="btn btn-outline-light btn-lg fw-bold px-5 rounded-pill hover-scale" style="border-width: 2px; padding-top: 12px; padding-bottom: 12px;">
+                        Partner Portal
+                    </a>
+                </div>
+            </div>
+
+            <!-- Right Dynamic Graphics -->
+            <div class="col-lg-6 position-relative d-none d-lg-block" style="min-height: 450px;">
+                
+                <!-- Main Image -->
+                <div class="position-absolute top-50 start-50 translate-middle w-100 float-slow">
+                    <img src="https://images.unsplash.com/photo-1526367790999-0150786686a2?auto=format&fit=crop&w=700&q=80" 
+                         class="img-fluid rounded-4 shadow-lg border border-4 border-white border-opacity-25" 
+                         style="transform: rotate(3deg);" alt="Fast Delivery">
+                </div>
+
+                <!-- Floating Glassmorphism Live Tracker Widget -->
+                <div class="glass-card live-tracker-widget float-fast shadow-lg">
+                    <div class="bg-white rounded-circle p-2 d-flex align-items-center justify-content-center shadow-sm" style="width: 45px; height: 45px;">
+                        <i class="bi bi-scooter fs-4 text-orange"></i>
+                    </div>
+                    <div>
+                        <small class="d-block text-white opacity-75 fw-bold text-uppercase" style="font-size: 0.65rem;">Order #FX-9021</small>
+                        <strong class="d-block text-white fs-6">Arriving in 4 mins</strong>
+                    </div>
+                </div>
+
+                <!-- Floating Groceries Tag -->
+                <div class="glass-card position-absolute float-slow shadow-lg px-4 py-3" style="bottom: 5%; left: 0;">
+                    <div class="d-flex align-items-center gap-3">
+                        <i class="bi bi-bag-check-fill fs-2 text-warning"></i>
+                        <div>
+                            <h6 class="mb-0 fw-bold text-white">Packed & Ready</h6>
+                            <small class="opacity-75">By Local Sellers</small>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================
+     STATS OVERLAP WIDGET
+     ========================================== -->
+<div class="container stats-overlap">
+    <div class="row bg-white rounded-4 shadow-lg p-4 p-md-5 text-center mx-2 mx-md-0 border-bottom border-warning border-4">
+        <div class="col-md-3 border-end border-light mb-3 mb-md-0">
+            <h2 class="fw-bold display-6" style="color: var(--fastx-navy);">10 <small class="fs-5 text-muted">Min</small></h2>
+            <p class="text-muted mb-0 fw-semibold text-uppercase tracking-wide small">Avg Delivery</p>
+        </div>
+        <div class="col-md-3 border-end border-light mb-3 mb-md-0">
+            <h2 class="fw-bold display-6" style="color: var(--fastx-orange);">15k+</h2>
+            <p class="text-muted mb-0 fw-semibold text-uppercase tracking-wide small">Products</p>
+        </div>
+        <div class="col-md-3 border-end border-light mb-3 mb-md-0">
+            <h2 class="fw-bold display-6" style="color: var(--fastx-sky);">450+</h2>
+            <p class="text-muted mb-0 fw-semibold text-uppercase tracking-wide small">Local Sellers</p>
+        </div>
+        <div class="col-md-3">
+            <h2 class="fw-bold display-6 text-success">99%</h2>
+            <p class="text-muted mb-0 fw-semibold text-uppercase tracking-wide small">On-Time Rate</p>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================
+     IMAGE-BASED CATEGORY SCROLLER
+     ========================================== -->
+<div class="container py-5 mt-5">
+    <div class="d-flex justify-content-between align-items-end mb-4 px-2">
+        <div>
+            <h2 class="fw-bold mb-1" style="color: var(--fastx-navy);">Shop by Category</h2>
+            <p class="text-muted mb-0">Tap a category to instantly browse products.</p>
+        </div>
+    </div>
+    
+    <div class="category-scroll-container">
+        {% for category in categories %}
+        <!-- Clicking this link passes the category name securely to the store page -->
+        <a href="{% url 'customer_home' %}?category={{ category.name|urlencode }}" class="category-card shadow-sm">
+            {% if category.image_url %}
+                <img src="{{ category.image_url }}" alt="{{ category.name }}">
+            {% elif category.image %}
+                <img src="{{ category.image.url }}" alt="{{ category.name }}">
+            {% else %}
+                <img src="https://images.unsplash.com/photo-1542838132-92c53300491e?w=300&q=80" alt="{{ category.name }}">
+            {% endif %}
+            <div class="category-overlay">
+                <h6>{{ category.name }}</h6>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- ==========================================
+     HOW IT WORKS (MODERNIZED)
+     ========================================== -->
+<div class="container py-5 mb-4">
+    <div class="text-center mb-5">
+        <h2 class="fw-bold display-6" style="color: var(--fastx-navy);">How we beat the clock.</h2>
+        <p class="text-muted max-w-50 mx-auto fs-5">Our proprietary hyper-local routing allows us to fulfill orders faster than you can get ready to leave the house.</p>
+    </div>
+
+    <div class="row g-5 text-center px-lg-5">
+        <div class="col-md-4 hover-scale">
+            <div class="mx-auto rounded-circle d-flex align-items-center justify-content-center mb-4 shadow" style="width: 90px; height: 90px; background: linear-gradient(135deg, #f8f9fa, #e9ecef);">
+                <i class="bi bi-phone-vibrate fs-1 text-navy" style="color: var(--fastx-navy);"></i>
+            </div>
+            <h4 class="fw-bold">1. Tap & Order</h4>
+            <p class="text-muted">Browse local stores. No minimum cart value required to checkout.</p>
+        </div>
+        <div class="col-md-4 hover-scale">
+            <div class="mx-auto rounded-circle d-flex align-items-center justify-content-center mb-4 shadow" style="width: 90px; height: 90px; background: linear-gradient(135deg, var(--fastx-orange), #ff8a00);">
+                <i class="bi bi-box-seam fs-1 text-white"></i>
+            </div>
+            <h4 class="fw-bold">2. Packed in 2 Mins</h4>
+            <p class="text-muted">Local sellers receive instant alerts. Items are bagged securely in seconds.</p>
+        </div>
+        <div class="col-md-4 hover-scale">
+            <div class="mx-auto rounded-circle d-flex align-items-center justify-content-center mb-4 shadow" style="width: 90px; height: 90px; background: linear-gradient(135deg, #f8f9fa, #e9ecef);">
+                <i class="bi bi-scooter fs-1 text-sky" style="color: var(--fastx-sky);"></i>
+            </div>
+            <h4 class="fw-bold">3. Doorstep Delivery</h4>
+            <p class="text-muted">Optimized AI routes bring the package directly to you instantly.</p>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================
+     PROMOTIONAL CAROUSEL (TIME-BASED SLIDE)
+     ========================================== -->
+<div class="container py-5 mb-5">
+    <div class="d-flex justify-content-between align-items-end mb-4">
+        <div>
+            <h2 class="fw-bold mb-0" style="color: var(--fastx-navy);">Live Promotions</h2>
+            <p class="text-muted mb-0">Top-rated items and exclusive discounts.</p>
+        </div>
+    </div>
+
+    {% if promotions %}
+    <div class="promo-carousel-wrapper">
+        <!-- data-bs-ride="carousel" ensures automatic sliding. carousel-fade makes it smooth. Arrows removed. -->
+        <div id="fastxPromoCarousel" class="carousel slide carousel-fade" data-bs-ride="carousel" data-bs-interval="3500">
+            
+            <!-- Custom Indicators -->
+            <div class="carousel-indicators mb-4">
+                {% for promo in promotions %}
+                <button type="button" data-bs-target="#fastxPromoCarousel" data-bs-slide-to="{{ forloop.counter0 }}" class="{% if forloop.first %}active{% endif %}" aria-current="{% if forloop.first %}true{% endif %}"></button>
+                {% endfor %}
+            </div>
+
+            <div class="carousel-inner">
+                {% for promo in promotions %}
+                <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                    
+                    {% if promo.is_video %}
+                        <video class="promo-carousel-media" autoplay loop muted playsinline>
+                            <source src="{{ promo.media.url }}" type="video/mp4">
+                        </video>
+                    {% else %}
+                        <img src="{{ promo.media.url }}" class="promo-carousel-media" alt="{{ promo.title }}">
+                    {% endif %}
+                    
+                    {% if promo.title or promo.description %}
+                    <div class="carousel-caption-custom">
+                        <h2 class="fw-bold display-5 mb-2 text-white text-shadow">{{ promo.title }}</h2>
+                        {% if promo.description %}
+                            <p class="fs-5 text-white opacity-75 mb-0" style="max-width: 700px;">{{ promo.description }}</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                </div>
+                {% endfor %}
+            </div>
+            <!-- REMOVED ARROWS AS REQUESTED -->
+        </div>
+    </div>
+    {% else %}
+    <div class="card bg-light border-0 shadow-sm rounded-4 p-5 text-center">
+        <h5 class="text-muted">Fresh deals arriving soon! Check back later.</h5>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ==========================================
+     SELLER & RIDER CTA CARDS
+     ========================================== -->
+<div class="container py-3 mb-5">
+    <div class="row align-items-center bg-white rounded-4 shadow-lg overflow-hidden border border-light">
+        <div class="col-lg-7 p-5">
+            <span class="badge bg-orange text-white px-3 py-2 rounded-pill mb-3" style="background: var(--fastx-orange);">For Business Owners</span>
+            <h2 class="fw-bold display-6 mb-3" style="color: var(--fastx-navy);">Grow your retail business with FASTX.</h2>
+            <p class="lead text-muted mb-4">Don't wait for customers to walk into your shop. Digitize your inventory and reach over 50,000 active buyers in your locality instantly.</p>
+            
+            <div class="row g-3 mb-5">
+                <div class="col-sm-6">
+                    <h6 class="fw-bold"><i class="bi bi-check-circle-fill text-success me-2"></i> Zero Setup Fees</h6>
+                    <p class="text-muted small">Register for free and list unlimited products.</p>
+                </div>
+                <div class="col-sm-6">
+                    <h6 class="fw-bold"><i class="bi bi-check-circle-fill text-success me-2"></i> We Handle Delivery</h6>
+                    <p class="text-muted small">You pack it, our riders deliver it safely.</p>
+                </div>
+            </div>
+            
+            <a href="{% url 'unified_login' %}" class="btn btn-dark btn-lg fw-bold rounded-pill px-5 shadow hover-scale">
+                Open Your Storefront <i class="bi bi-arrow-right ms-2"></i>
+            </a>
+        </div>
+        
+        <div class="col-lg-5 p-0 d-none d-lg-block h-100">
+            <img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=600&q=80" 
+                 alt="Happy Seller" class="img-fluid h-100 object-fit-cover" style="min-height: 500px;">
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid py-5 text-center text-white" style="background: var(--fastx-navy);">
+    <div class="container py-5">
+        <h2 class="fw-bold display-5 mb-3">Earn on your own schedule.</h2>
+        <p class="lead opacity-75 mb-5 mx-auto" style="max-width: 700px;">
+            Join the FASTX delivery fleet. Be your own boss, earn up to ₹30,000 per month with flexible hours, and get your payouts deposited securely.
+        </p>
+        <a href="{% url 'unified_login' %}" class="btn btn-warning btn-lg fw-bold rounded-pill px-5 hover-scale" style="color: var(--fastx-navy);">
+            Apply as Delivery Partner
+        </a>
+    </div>
+</div>
+
+<!-- Scripts for Dynamic Features -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Typewriter Effect Logic
+        const words = ["Groceries", "Medicines", "Electronics", "Snacks", "Stationery"];
+        let wordIndex = 0;
+        let charIndex = 0;
+        let isDeleting = false;
+        const typeSpeed = 100;
+        const deleteSpeed = 50;
+        const pauseTime = 2000;
+        const typewriterElement = document.getElementById("typewriter");
+
+        function type() {
+            const currentWord = words[wordIndex];
+            
+            if (isDeleting) {
+                typewriterElement.textContent = currentWord.substring(0, charIndex - 1);
+                charIndex--;
+            } else {
+                typewriterElement.textContent = currentWord.substring(0, charIndex + 1);
+                charIndex++;
+            }
+
+            let speed = isDeleting ? deleteSpeed : typeSpeed;
+
+            if (!isDeleting && charIndex === currentWord.length) {
+                speed = pauseTime; // Pause at end of word
+                isDeleting = true;
+            } else if (isDeleting && charIndex === 0) {
+                isDeleting = false;
+                wordIndex = (wordIndex + 1) % words.length; // Move to next word
+                speed = 500; // Pause before typing next word
+            }
+
+            setTimeout(type, speed);
+        }
+
+        // Start typewriter
+        setTimeout(type, 1000);
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Categories | FASTX Admin{% endblock %}
+
+{% block content %}
+<div class="container py-4 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold mb-0">Store Categories</h3>
+            <p class="text-muted small">Manage the departments available for vendors to list products.</p>
+        </div>
+        <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-dark rounded-pill px-4 shadow-sm">
+            <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <!-- Display System Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert 
+                {% if message.tags == 'error' %}alert-danger
+                {% elif message.tags == 'success' %}alert-success
+                {% else %}alert-info{% endif %} 
+                border-0 shadow-sm rounded-4 small d-flex align-items-center mb-4">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row g-4">
+        <!-- DYNAMIC ADD/EDIT CATEGORY FORM -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 p-4 sticky-top" style="top: 20px;">
+                <h5 class="fw-bold mb-3" id="formTitle"><i class="bi bi-plus-circle text-orange me-2"></i>Add Category</h5>
+                
+                <form method="POST" action="{% url 'manage_categories' %}" enctype="multipart/form-data" id="categoryForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" id="formAction" value="add">
+                    <input type="hidden" name="category_id" id="categoryId" value="">
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Category Name</label>
+                        <input type="text" name="name" id="catName" class="form-control bg-light border-0 py-2" required placeholder="e.g., Fresh Produce">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Icon or Emoji</label>
+                        <input type="text" name="icon" id="catIcon" class="form-control bg-light border-0 py-2" placeholder="e.g., bi bi-apple OR 🍎" required>
+                        <small class="text-muted d-block mt-1">Fallback icon if no image is provided.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Upload Image</label>
+                        <input type="file" name="image" id="catImage" class="form-control bg-light border-0 py-2" accept="image/*">
+                        <small class="text-muted d-block mt-1" id="imageHelperText">Upload a new image to override existing.</small>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-muted text-uppercase">OR Image URL</label>
+                        <input type="url" name="image_url" id="catImageUrl" class="form-control bg-light border-0 py-2" placeholder="https://example.com/image.jpg">
+                    </div>
+
+                    <button type="submit" id="submitBtn" class="btn btn-navy w-100 rounded-pill shadow-sm fw-bold">
+                        Save Category
+                    </button>
+                    <button type="button" id="cancelEditBtn" class="btn btn-light w-100 rounded-pill shadow-sm fw-bold mt-2 d-none" onclick="resetForm()">
+                        Cancel Edit
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- CATEGORIES TABLE -->
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light text-muted small text-uppercase">
+                            <tr>
+                                <th>Display</th>
+                                <th>Category Name</th>
+                                <th>Total Products</th>
+                                <th class="text-end pe-3">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cat in categories %}
+                            <tr>
+                                <td>
+                                    <div class="bg-light rounded-3 d-flex align-items-center justify-content-center shadow-sm text-navy overflow-hidden" style="width: 50px; height: 50px;">
+                                        {% if cat.image %}
+                                            <img src="{{ cat.image.url }}" class="w-100 h-100 object-fit-cover" alt="{{ cat.name }}">
+                                        {% elif cat.image_url %}
+                                            <img src="{{ cat.image_url }}" class="w-100 h-100 object-fit-cover" alt="{{ cat.name }}">
+                                        {% elif 'bi ' in cat.icon or 'bi-' in cat.icon %}
+                                            <i class="{{ cat.icon }} fs-4"></i>
+                                        {% else %}
+                                            <span class="fs-4">{{ cat.icon }}</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="fw-bold">{{ cat.name }}</td>
+                                
+                                <td>
+                                    <span class="badge {% if cat.items.count > 0 %}bg-primary{% else %}bg-secondary{% endif %} rounded-pill px-3">
+                                        {{ cat.items.count }} items
+                                    </span>
+                                </td>
+                                
+                                <td class="text-end">
+                                    <!-- EDIT BUTTON -->
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 me-1" 
+                                            onclick="editCategory('{{ cat.id }}', '{{ cat.name|escapejs }}', '{{ cat.icon|escapejs }}', '{{ cat.image_url|default:''|escapejs }}')">
+                                        Edit
+                                    </button>
+
+                                    <!-- DELETE FORM -->
+                                    <form action="{% url 'delete_category' cat.id %}" method="POST" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="return confirm('Are you sure you want to delete {{ cat.name }}? This will affect products using it!');">
+                                            Delete
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-5 text-muted">
+                                    <i class="bi bi-grid fs-1 d-block mb-2 opacity-50"></i>
+                                    No categories created yet.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function editCategory(id, name, icon, imageUrl) {
+        // Change Form State to Edit
+        document.getElementById('formAction').value = 'edit';
+        document.getElementById('categoryId').value = id;
+        document.getElementById('formTitle').innerHTML = '<i class="bi bi-pencil-square text-primary me-2"></i>Edit Category';
+        
+        // Populate Data
+        document.getElementById('catName').value = name;
+        document.getElementById('catIcon').value = icon;
+        document.getElementById('catImageUrl').value = imageUrl;
+        document.getElementById('catImage').value = ''; // Reset file input
+        
+        // Change UI Buttons
+        document.getElementById('submitBtn').innerText = 'Update Category';
+        document.getElementById('submitBtn').classList.replace('btn-navy', 'btn-primary');
+        document.getElementById('cancelEditBtn').classList.remove('d-none');
+        
+        // Smooth scroll to top for smaller screens
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetForm() {
+        // Change Form State to Add
+        document.getElementById('formAction').value = 'add';
+        document.getElementById('categoryId').value = '';
+        document.getElementById('formTitle').innerHTML = '<i class="bi bi-plus-circle text-orange me-2"></i>Add Category';
+        
+        // Clear Data
+        document.getElementById('catName').value = '';
+        document.getElementById('catIcon').value = 'bi bi-basket';
+        document.getElementById('catImageUrl').value = '';
+        document.getElementById('catImage').value = '';
+        
+        // Reset UI Buttons
+        document.getElementById('submitBtn').innerText = 'Save Category';
+        document.getElementById('submitBtn').classList.replace('btn-primary', 'btn-navy');
+        document.getElementById('cancelEditBtn').classList.add('d-none');
+    }
+</script>
+{% endblock %}

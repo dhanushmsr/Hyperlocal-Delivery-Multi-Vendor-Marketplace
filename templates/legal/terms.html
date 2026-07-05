@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block title %}Terms & Conditions | FASTX{% endblock %}
+
+{% block content %}
+<div class="container py-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="text-center mb-5">
+                <h1 class="fw-bold text-navy">Terms & Conditions</h1>
+                <p class="text-muted">Last Updated: June 30, 2026</p>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 bg-white lh-lg mb-5">
+                <h4 class="fw-bold text-navy border-bottom pb-2 mb-4">1. General Platform Terms</h4>
+                <p class="text-muted small">Welcome to <strong>FASTX</strong>, powered by OXRO Private Ltd. By downloading, accessing, or using the FASTX mobile application or website, you agree to be bound by these Terms. FASTX provides a technology platform connecting independent buyers, registered vendors, and independent delivery personnel. The platform itself does not own, sell, or resell any food, groceries, or merchandise.</p>
+
+                <h4 class="fw-bold text-navy border-bottom pb-2 mb-4 mt-5">2. Customer Terms & Conditions</h4>
+                <ul class="text-muted small mb-4">
+                    <li class="mb-2"><strong>10-Minute Delivery Estimate:</strong> The "10-Minute" delivery is an estimate based on optimal hyper-local conditions. FASTX is not liable for delays caused by traffic, severe weather, or high order volumes.</li>
+                    <li class="mb-2"><strong>FASTX Wallet:</strong> The FASTX Wallet is a closed-loop digital instrument. Funds added to the wallet can only be used on the FASTX platform and cannot be transferred to an external bank account or redeemed for cash.</li>
+                    <li class="mb-2"><strong>Cancellations & Refunds:</strong> Orders cannot be canceled once the vendor has accepted and begun packing the items. Refunds for damaged or missing items will be credited to the FASTX Wallet after verification.</li>
+                    <li class="mb-2"><strong>User Conduct:</strong> Customers must provide accurate location data and ensure their contact number is reachable during active deliveries.</li>
+                </ul>
+
+                <h4 class="fw-bold text-orange border-bottom pb-2 mb-4 mt-5">3. Seller (Vendor) Terms & Conditions</h4>
+                <ul class="text-muted small mb-4">
+                    <li class="mb-2"><strong>Compliance & Quality:</strong> Sellers must ensure all listed products meet local quality standards, including FSSAI compliance for consumables. Expired or defective products will result in financial penalties.</li>
+                    <li class="mb-2"><strong>Platform Commission:</strong> Sellers agree to a standard 10% platform commission fee on the gross merchandise value of every successful order.</li>
+                    <li class="mb-2"><strong>Ledger & Settlements:</strong> Payouts are calculated dynamically (Total Sales - Commission - Applicable Discounts) and are settled into the seller's registered bank account upon the Admin's clearance via the FASTX Settlement Dashboard.</li>
+                    <li class="mb-2"><strong>Inventory Accuracy:</strong> Sellers are strictly responsible for maintaining real-time inventory accuracy on their dashboard to prevent out-of-stock cancellations.</li>
+                </ul>
+
+                <h4 class="fw-bold text-success border-bottom pb-2 mb-4 mt-5">4. Rider (Delivery Partner) Terms & Conditions</h4>
+                <ul class="text-muted small mb-4">
+                    <li class="mb-2"><strong>Independent Contractor:</strong> Riders operate as independent contractors, not direct employees of OXRO Private Ltd. FASTX acts purely as a lead-generation platform for delivery gigs.</li>
+                    <li class="mb-2"><strong>Safety & Traffic Laws:</strong> Riders must strictly adhere to all local traffic laws. FASTX does not encourage speeding to meet the 10-minute delivery goal and will not cover traffic violations or accident liabilities.</li>
+                    <li class="mb-2"><strong>Payouts:</strong> Delivery fees are credited to the rider's ledger upon successful delivery confirmation. Fraudulent deliveries or theft will result in immediate permanent suspension.</li>
+                </ul>
+
+                <h4 class="fw-bold text-navy border-bottom pb-2 mb-4 mt-5">5. Governing Law & Jurisdiction</h4>
+                <p class="text-muted small">These Terms are governed by the laws of India. Any disputes arising out of the use of this platform shall be subject to the exclusive jurisdiction of the courts located in Bengaluru, Karnataka.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sticky Acceptance Footer -->
+<div class="fixed-bottom bg-white border-top shadow-lg p-3" style="z-index: 1050;">
+    <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center">
+        <div class="form-check mb-3 mb-md-0">
+            <input class="form-check-input border-dark" type="checkbox" id="acceptTermsCheck" onchange="toggleAcceptButton('acceptTermsBtn', this)">
+            <label class="form-check-label fw-bold text-dark small" for="acceptTermsCheck">
+                I have read, understood, and agree to the FASTX Terms and Conditions.
+            </label>
+        </div>
+        <button class="btn btn-dark rounded-pill px-5 fw-bold shadow-sm" id="acceptTermsBtn" disabled onclick="window.history.back()">
+            Accept & Continue
+        </button>
+    </div>
+</div>
+
+<script>
+    function toggleAcceptButton(btnId, checkbox) {
+        document.getElementById(btnId).disabled = !checkbox.checked;
+    }
+</script>
+{% endblock %}

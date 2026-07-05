@@ -1,0 +1,430 @@
+{% extends 'base.html' %}
+{% block title %}Become a Delivery Partner | FASTX{% endblock %}
+
+{% block content %}
+<style>
+    /* Custom enhancements for a premium feel */
+    .onboarding-card {
+        border-radius: 1.5rem;
+    }
+    .form-control, .form-select {
+        border: 1px solid #dee2e6;
+        transition: all 0.3s ease;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #fd7e14; /* FASTX Orange */
+        box-shadow: 0 0 0 0.25rem rgba(253, 126, 20, 0.25);
+        background-color: #fff;
+    }
+    .section-box {
+        background-color: #f8f9fa;
+        border: 1px solid rgba(0,0,0,0.05);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    .icon-circle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: rgba(253, 126, 20, 0.1);
+        color: #fd7e14;
+        margin-right: 12px;
+    }
+    .btn-orange-gradient {
+        background: linear-gradient(135deg, #fd7e14 0%, #e85d04 100%);
+        color: white;
+        border: none;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-orange-gradient:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 .5rem 1rem rgba(232, 93, 4, 0.3)!important;
+        color: white;
+    }
+    /* Password Requirements Styling */
+    .req-list { list-style: none; padding-left: 0; font-size: 0.75rem; margin-bottom: 0;}
+    .req-list li { margin-bottom: 4px; color: #6c757d; transition: color 0.3s ease; }
+    .req-list li i { margin-right: 6px; }
+    .req-met { color: #198754 !important; }
+    .req-unmet { color: #dc3545 !important; }
+</style>
+
+<div class="container py-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-9 col-xl-8">
+            
+            <!-- Hero Header -->
+            <div class="text-center mb-5">
+                <span class="badge bg-orange text-black px-3 py-2 rounded-pill mb-3 shadow-sm fs-6" style="background-color: #FF6B00; color: white !important;">Join the Fleet</span>
+                <h1 class="fw-bold text-navy mb-2"><i class="bi bi-scooter text-orange me-2"></i>Ride with FASTX</h1>
+                <p class="text-muted fs-5">Turn your miles into money. Be your own boss and earn on your own schedule.</p>
+            </div>
+
+            <div class="card border-0 shadow-lg onboarding-card overflow-hidden">
+                <!-- Card Header -->
+                <div class="text-white p-4 text-center position-relative" style="background-color: var(--fastx-navy);">
+                    <h4 class="mb-0 fw-bold tracking-wide">Partner Application Form</h4>
+                    <div class="position-absolute bottom-0 start-0 w-100" style="height: 4px; background: #fd7e14;"></div>
+                </div>
+                
+                <div class="card-body p-4 p-md-5">
+                    <form action="{% url 'rider_register' %}" method="POST" enctype="multipart/form-data" id="riderRegistrationForm">
+                        {% csrf_token %}
+                        
+                        <!-- 1. Personal Details -->
+                        <div class="section-box shadow-sm">
+                            <h5 class="fw-bold text-navy mb-4 d-flex align-items-center">
+                                <div class="icon-circle"><i class="bi bi-person-vcard fs-5"></i></div>
+                                1. Personal Details
+                            </h5>
+                            
+                            <div class="row g-4">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">First Name</label>
+                                    <input type="text" name="first_name" class="form-control form-control-lg bg-white shadow-sm" 
+                                        value="{{ request.user.first_name|default:'' }}" 
+                                        {% if request.user.is_authenticated %}readonly{% endif %} required placeholder="Enter first name">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">Last Name</label>
+                                    <input type="text" name="last_name" class="form-control form-control-lg bg-white shadow-sm" 
+                                        value="{{ request.user.last_name|default:'' }}" 
+                                        {% if request.user.is_authenticated %}readonly{% endif %} required placeholder="Enter last name">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">Email Address</label>
+                                    <div class="input-group input-group-lg shadow-sm rounded overflow-hidden">
+                                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-envelope"></i></span>
+                                        <input type="email" name="email" class="form-control bg-white border-start-0 ps-0 shadow-none" 
+                                            value="{{ request.user.email|default:'' }}" 
+                                            {% if request.user.is_authenticated %}readonly{% endif %} required placeholder="name@example.com">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">Age</label>
+                                    <input type="number" name="age" class="form-control form-control-lg bg-white shadow-sm" min="18" required placeholder="Must be 18+">
+                                </div>
+
+                                <!-- INLINE OTP INTEGRATION -->
+                                <div class="col-12">
+                                    <label class="form-label small fw-bold text-muted">Registered Phone Number</label>
+                                    <div class="input-group input-group-lg shadow-sm rounded overflow-hidden border bg-white">
+                                        <span class="input-group-text bg-white border-0 text-muted"><i class="bi bi-telephone"></i></span>
+                                        <input type="tel" name="phone" id="phone_number" class="form-control bg-transparent border-0 ps-0 shadow-none" 
+                                            value="{{ request.user.customer_profile.phone_number|default:'' }}" required placeholder="10-digit mobile number" pattern="[0-9]{10}" maxlength="10">
+                                        <button type="button" class="btn btn-dark fw-bold px-4 m-1 rounded" id="btn-send-otp" onclick="requestOTP()">Get OTP</button>
+                                    </div>
+                                </div>
+
+                                <!-- HIDDEN OTP BLOCK -->
+                                <div class="col-12 mt-2 p-3 bg-light border border-primary border-opacity-25 rounded-4 d-none transition-all" id="otp-block">
+                                    <label class="form-label text-primary fw-bold small"><i class="bi bi-chat-text me-1"></i> Enter 6-Digit OTP</label>
+                                    <div class="input-group shadow-sm rounded-pill overflow-hidden border bg-white">
+                                        <input type="text" id="otp_input" class="form-control border-0 text-center fw-bold letter-spacing-2 py-2 shadow-none" placeholder="• • • • • •" maxlength="6" autocomplete="one-time-code">
+                                        <button type="button" class="btn btn-success fw-bold px-4" id="btn-verify-otp" onclick="verifyOTP()">Verify</button>
+                                    </div>
+                                    <div class="text-center mt-2" id="otp-timer-text">
+                                        <small class="text-muted">OTP sent to your mobile via SMS.</small>
+                                    </div>
+                                </div>
+
+                                <!-- SECURITY & PASSWORD VALIDATION -->
+                                {% if not request.user.is_authenticated %}
+                                <div class="col-12 mt-3 pt-3 border-top">
+                                    <label class="form-label small fw-bold text-muted d-block"><i class="bi bi-shield-lock-fill text-success me-1"></i> Security Setup</label>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <div class="input-group input-group-lg shadow-sm border bg-white rounded overflow-hidden">
+                                                <span class="input-group-text bg-white border-0 text-muted"><i class="bi bi-lock"></i></span>
+                                                <input type="password" name="password" id="new_password" class="form-control bg-transparent border-0 ps-0 shadow-none" placeholder="Secure Password" required onkeyup="validateRegistration()">
+                                                <button type="button" class="btn bg-transparent border-0 text-muted px-3" onclick="togglePasswordVisibility('new_password', this)"><i class="bi bi-eye"></i></button>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="input-group input-group-lg shadow-sm border bg-white rounded overflow-hidden">
+                                                <span class="input-group-text bg-white border-0 text-muted"><i class="bi bi-check2-all"></i></span>
+                                                <input type="password" name="confirm_password" id="confirm_password" class="form-control bg-transparent border-0 ps-0 shadow-none" placeholder="Confirm Password" required onkeyup="validateRegistration()">
+                                                <button type="button" class="btn bg-transparent border-0 text-muted px-3" onclick="togglePasswordVisibility('confirm_password', this)"><i class="bi bi-eye"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Password Requirements Checklist -->
+                                    <div class="bg-light p-3 rounded-4 mt-3 border">
+                                        <p class="small fw-bold mb-2 text-dark">Password Requirements:</p>
+                                        <ul class="req-list row mb-0">
+                                            <div class="col-sm-6">
+                                                <li id="req-length"><i class="bi bi-circle"></i> 8+ characters</li>
+                                                <li id="req-capital"><i class="bi bi-circle"></i> 1 uppercase letter</li>
+                                            </div>
+                                            <div class="col-sm-6">
+                                                <li id="req-special"><i class="bi bi-circle"></i> 1 special character</li>
+                                                <li id="req-match"><i class="bi bi-circle"></i> Passwords match</li>
+                                            </div>
+                                        </ul>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- 2. Verification & Documents -->
+                        <div class="section-box shadow-sm">
+                            <h5 class="fw-bold text-navy mb-4 d-flex align-items-center">
+                                <div class="icon-circle"><i class="bi bi-shield-check fs-5"></i></div>
+                                2. Verification & Documents
+                            </h5>
+                            
+                            <div class="row g-4">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">Vehicle Type</label>
+                                    <!-- FIXED: Name attribute updated to 'vehicle_type' -->
+                                    <select name="vehicle_type" class="form-select form-select-lg bg-white shadow-sm" required>
+                                        <option value="" disabled selected>Select your vehicle...</option>
+                                        <option value="Bike">Motorcycle / Bike</option>
+                                        <option value="Scooter">Scooter / Moped</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">Driving License Number</label>
+                                    <input type="text" name="license_number" class="form-control form-control-lg bg-white shadow-sm" placeholder="e.g. TN-38-2026-XXXX" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">Upload Driving License</label>
+                                    <input type="file" name="license_photo" class="form-control form-control-lg bg-white shadow-sm" accept="image/*,.pdf" required>
+                                    <div class="form-text text-primary small mt-1"><i class="bi bi-info-circle me-1"></i>Upload a clear photo of the front side.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">Upload Profile Photo (Selfie)</label>
+                                    <input type="file" name="profile_photo" class="form-control form-control-lg bg-white shadow-sm" accept="image/*" required>
+                                    <div class="form-text text-primary small mt-1"><i class="bi bi-info-circle me-1"></i>Used for customer tracking & ID.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Bank Account Details -->
+                        <div class="section-box shadow-sm">
+                            <h5 class="fw-bold text-navy mb-4 d-flex align-items-center">
+                                <div class="icon-circle"><i class="bi bi-bank fs-5"></i></div>
+                                3. Bank & Payout Details
+                            </h5>
+                            
+                            <div class="row g-4">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">Name on Bank Account</label>
+                                    <input type="text" name="bank_account_name" class="form-control form-control-lg bg-white shadow-sm" placeholder="e.g. {{ request.user.first_name|default:'John Doe' }}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">Bank Name</label>
+                                    <input type="text" name="bank_name" class="form-control form-control-lg bg-white shadow-sm" placeholder="e.g. SBI, HDFC" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">Account Number</label>
+                                    <input type="text" name="account_number" class="form-control form-control-lg bg-white shadow-sm" placeholder="Enter full account number" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold text-muted">IFSC Code</label>
+                                    <input type="text" name="ifsc_code" class="form-control form-control-lg bg-white shadow-sm" placeholder="e.g. SBIN0001234" required>
+                                </div>
+                                <div class="col-md-12">
+                                    <label class="form-label small fw-bold text-muted">Upload Passbook / Cancelled Cheque</label>
+                                    <input type="file" name="passbook_photo" class="form-control form-control-lg bg-white shadow-sm" accept="image/*" required>
+                                    <div class="form-text text-primary small mt-1"><i class="bi bi-info-circle me-1"></i>Clear photo showing your Name, Account No, and IFSC.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. Legal & Safety Policies -->
+                        <div class="section-box shadow-sm bg-white border-warning border-opacity-50 border-2">
+                            <h5 class="fw-bold text-navy mb-3 d-flex align-items-center">
+                                <div class="icon-circle bg-warning bg-opacity-10 text-warning"><i class="bi bi-file-earmark-ruled fs-5"></i></div>
+                                4. Legal & Safety Policies
+                            </h5>
+                            
+                            <div class="form-check mb-3 ms-2 mt-3">
+                                <input class="form-check-input form-check-input-lg border-secondary mt-1" type="checkbox" name="terms" id="termsCheck" required style="transform: scale(1.2);" onchange="validateRegistration()">
+                                <label class="form-check-label ms-2 text-dark" for="termsCheck">
+                                    I agree to the <a href="{% url 'terms' %}" class="text-orange text-decoration-none fw-bold">Terms & Conditions</a> and <a href="{% url 'privacy' %}" class="text-orange text-decoration-none fw-bold">Privacy Policy</a>. I understand that my background and documents will be verified.
+                                </label>
+                            </div>
+                            <div class="form-check ms-2">
+                                <input class="form-check-input form-check-input-lg border-secondary mt-1" type="checkbox" name="traffic_policy" id="trafficCheck" required style="transform: scale(1.2);" onchange="validateRegistration()">
+                                <label class="form-check-label ms-2 text-dark" for="trafficCheck">
+                                    I agree to strictly follow all local traffic rules and speed limits. I understand that FASTX maintains a <strong>zero-tolerance policy</strong> for reckless driving, and violations will result in immediate termination.
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="text-center mt-5">
+                            <button type="submit" id="final-submit-btn" class="btn btn-orange-gradient btn-lg w-100 rounded-pill py-3 fw-bold fs-5 shadow" disabled>
+                                <i class="bi bi-rocket-takeoff me-2"></i> Submit Application
+                            </button>
+                            <p class="text-muted small mt-3"><i class="bi bi-lock-fill text-success me-1"></i> Your information is securely encrypted and stored.</p>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+<script>
+    let isOtpVerified = false;
+
+    // --- 1. OTP REQUEST & VERIFICATION ---
+    function requestOTP() {
+        let phone = document.getElementById('phone_number').value.trim();
+        if(phone.length !== 10) { 
+            alert("Please enter a valid 10-digit mobile number."); 
+            return; 
+        }
+        
+        let btn = document.getElementById('btn-send-otp');
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+        btn.disabled = true;
+        
+        fetch('/api/send-otp/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+            body: JSON.stringify({phone: phone, action: 'register_rider'})
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) {
+                document.getElementById('phone_number').readOnly = true;
+                document.getElementById('otp-block').classList.remove('d-none');
+                btn.innerHTML = 'Resend';
+                btn.classList.replace('btn-dark', 'btn-outline-secondary');
+                btn.disabled = false;
+            } else {
+                alert(data.error || "Failed to send OTP.");
+                btn.innerHTML = 'Get OTP';
+                btn.disabled = false;
+            }
+        })
+        .catch(err => {
+            alert("Network error occurred.");
+            btn.innerHTML = 'Get OTP';
+            btn.disabled = false;
+        });
+    }
+
+    function verifyOTP() {
+        let phone = document.getElementById('phone_number').value.trim();
+        let otp = document.getElementById('otp_input').value.trim();
+        
+        if(otp.length !== 6) {
+            alert("Please enter the 6-digit OTP.");
+            return;
+        }
+
+        let btn = document.getElementById('btn-verify-otp');
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        btn.disabled = true;
+        
+        fetch('/api/verify-otp/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+            body: JSON.stringify({phone: phone, otp: otp})
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) {
+                isOtpVerified = true;
+                document.getElementById('otp-block').innerHTML = '<div class="text-center p-2"><h6 class="text-success fw-bold mb-0"><i class="bi bi-check-circle-fill me-2"></i> Mobile Number Verified</h6></div>';
+                validateRegistration(); // Re-check all validations
+            } else {
+                alert(data.error || "Invalid OTP code.");
+                btn.innerHTML = 'Verify';
+                btn.disabled = false;
+            }
+        })
+        .catch(err => {
+            alert("Network error occurred.");
+            btn.innerHTML = 'Verify';
+            btn.disabled = false;
+        });
+    }
+
+    // --- 2. REGISTRATION VALIDATION ENGINE ---
+    function validateRegistration() {
+        const pwdElem = document.getElementById('new_password');
+        const confirmPwdElem = document.getElementById('confirm_password');
+        const isTncChecked = document.getElementById('termsCheck').checked;
+        const isTrafficChecked = document.getElementById('trafficCheck').checked;
+        
+        let isPwdValid = true;
+
+        if (pwdElem && confirmPwdElem) {
+            const pwd = pwdElem.value;
+            const confirmPwd = confirmPwdElem.value;
+            
+            const reqLength = document.getElementById('req-length');
+            const reqCapital = document.getElementById('req-capital');
+            const reqSpecial = document.getElementById('req-special');
+            const reqMatch = document.getElementById('req-match');
+
+            // Check Length
+            if(pwd.length >= 8) { setReqStatus(reqLength, true); } 
+            else { setReqStatus(reqLength, false); isPwdValid = false; }
+
+            // Check Capital Letter
+            if(/[A-Z]/.test(pwd)) { setReqStatus(reqCapital, true); } 
+            else { setReqStatus(reqCapital, false); isPwdValid = false; }
+
+            // Check Special Character
+            if(/[!@#$%^&*(),.?":{}|<>]/.test(pwd)) { setReqStatus(reqSpecial, true); } 
+            else { setReqStatus(reqSpecial, false); isPwdValid = false; }
+
+            // Check Match
+            if(pwd.length > 0 && pwd === confirmPwd) { setReqStatus(reqMatch, true); } 
+            else { setReqStatus(reqMatch, false); isPwdValid = false; }
+        }
+
+        // Enable Submit Button ONLY if OTP verified, all T&Cs checked, and Password valid (if present)
+        const submitBtn = document.getElementById('final-submit-btn');
+        if (isPwdValid && isOtpVerified && isTncChecked && isTrafficChecked) {
+            submitBtn.disabled = false;
+        } else {
+            submitBtn.disabled = true;
+        }
+    }
+
+    function setReqStatus(element, isMet) {
+        if (!element) return;
+        if(isMet) {
+            element.classList.remove('req-unmet');
+            element.classList.add('req-met');
+            element.querySelector('i').className = 'bi bi-check-circle-fill';
+        } else {
+            element.classList.remove('req-met');
+            if(document.getElementById('new_password').value.length > 0) {
+                element.classList.add('req-unmet');
+                element.querySelector('i').className = 'bi bi-x-circle-fill';
+            } else {
+                element.querySelector('i').className = 'bi bi-circle';
+            }
+        }
+    }
+
+    // --- 3. UI HELPERS ---
+    function togglePasswordVisibility(inputId, btnElement) {
+        const input = document.getElementById(inputId);
+        const icon = btnElement.querySelector('i');
+        if (input.type === "password") {
+            input.type = "text";
+            icon.classList.replace('bi-eye', 'bi-eye-slash');
+        } else {
+            input.type = "password";
+            icon.classList.replace('bi-eye-slash', 'bi-eye');
+        }
+    }
+</script>
+{% endblock %}

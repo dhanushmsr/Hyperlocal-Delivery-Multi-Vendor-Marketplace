@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Manage {{ user_type }}s | FASTX Admin{% endblock %}
+
+{% block content %}
+<style>
+    @media print {
+        body { background: white; padding: 0; }
+        .no-print { display: none !important; }
+        .fastx-navbar, .fastx-footer { display: none !important; }
+        .table { border: 1px solid #000; }
+        .table th, .table td { border: 1px solid #000; padding: 8px; }
+        .print-header { display: block !important; text-align: center; margin-bottom: 20px; }
+    }
+    .print-header { display: none; }
+</style>
+
+<div class="container-fluid py-4">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+        <h2 class="fw-bold text-navy"><i class="bi bi-people-fill text-orange me-2"></i>{{ user_type }} Database</h2>
+        <div>
+            <button onclick="window.print()" class="btn btn-dark rounded-pill shadow-sm">
+                <i class="bi bi-printer me-2"></i> Extract / Print Data
+            </button>
+        </div>
+    </div>
+
+    <div class="print-header">
+        <h2>FASTX {{ user_type }} Report</h2>
+        <p>Generated on: {% now "F j, Y, g:i a" %}</p>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="py-3 ps-4">ID</th>
+                            <th>Name / Business</th>
+                            <th>Email & Contact</th>
+                            <th>Joined Date</th>
+                            
+                            {% if user_type == 'Customer' %}
+                                <th>Total Orders</th>
+                                <th>Lifetime Value</th>
+                            {% else %}
+                                <th>Products Sold</th>
+                                <th>Revenue Generated</th>
+                            {% endif %}
+                            
+                            <th class="no-print">Account Status</th>
+                            <th class="text-end pe-4 no-print">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users_list %}
+                        <tr>
+                            <td class="ps-4 fw-bold text-muted">#{{ user.id }}</td>
+                            <td>
+                                <strong class="d-block text-dark">{{ user.get_full_name|default:user.username }}</strong>
+                                {% if user.is_vendor %}<span class="badge bg-orange px-2 py-1 small rounded-pill mt-1">Verified Seller</span>{% endif %}
+                            </td>
+                            <td>
+                                <span class="d-block">{{ user.email }}</span>
+                                <small class="text-muted">{{ user.phone_number|default:"N/A" }}</small>
+                            </td>
+                            <td>{{ user.date_joined|date:"M d, Y" }}</td>
+                            
+                            {% if user_type == 'Customer' %}
+                                <td>{{ user.total_orders|default:"0" }}</td>
+                                <td class="text-success fw-bold">₹{{ user.total_spent|default:"0.00" }}</td>
+                            {% else %}
+                                <td>{{ user.total_sales|default:"0" }}</td>
+                                <td class="text-success fw-bold">₹{{ user.revenue_generated|default:"0.00" }}</td>
+                            {% endif %}
+                            
+                            <td class="no-print">
+                                <span id="status-badge-{{ user.id }}" class="badge {% if user.is_active %}bg-success{% else %}bg-danger{% endif %} rounded-pill px-3 py-2">
+                                    {% if user.is_active %}Active{% else %}Blocked{% endif %}
+                                </span>
+                            </td>
+                            
+                            <td class="text-end pe-4 no-print">
+                                <div class="form-check form-switch d-inline-block">
+                                    <input class="form-check-input user-status-toggle" type="checkbox" role="switch" 
+                                           data-user-id="{{ user.id }}" 
+                                           id="switch-{{ user.id }}" 
+                                           style="cursor: pointer;"
+                                           {% if user.is_active %}checked{% endif %}>
+                                    <label class="form-check-label small ms-1" for="switch-{{ user.id }}">Access</label>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-5">
+                                <i class="bi bi-inbox fs-1 d-block mb-3"></i> No {{ user_type }}s found in the system.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const toggles = document.querySelectorAll('.user-status-toggle');
+    const csrfToken = '{{ csrf_token }}';
+
+    toggles.forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const userId = this.getAttribute('data-user-id');
+            const isActive = this.checked;
+            const badge = document.getElementById(`status-badge-${userId}`);
+
+            // Optimistically update UI
+            badge.className = `badge rounded-pill px-3 py-2 ${isActive ? 'bg-success' : 'bg-danger'}`;
+            badge.innerText = isActive ? 'Active' : 'Blocked';
+
+            // Send AJAX Request
+            fetch(`/admin-api/toggle-user/${userId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ is_active: isActive })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(!data.success) {
+                    alert('Error: ' + data.error);
+                    // Revert UI if backend fails
+                    this.checked = !isActive;
+                    badge.className = `badge rounded-pill px-3 py-2 ${!isActive ? 'bg-success' : 'bg-danger'}`;
+                    badge.innerText = !isActive ? 'Active' : 'Blocked';
+                }
+            })
+            .catch(error => {
+                console.error('System Error:', error);
+                alert("Network error occurred.");
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

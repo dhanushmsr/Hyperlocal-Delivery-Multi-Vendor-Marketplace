@@ -1,0 +1,468 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}FASTX | Vendor Dashboard{% endblock %}
+
+{% block content %}
+<!-- SOUND ENABLE BANNER -->
+<div id="soundEnableBanner" class="alert alert-warning text-center fw-bold rounded-0 mb-4 shadow-sm" style="display:none; cursor:pointer; z-index: 1050; border-bottom: 3px solid #dc3545;" onclick="enableSound()">
+    <i class="bi bi-volume-mute-fill me-2 fs-5 text-danger"></i> 
+    <span class="text-dark">Click here to enable sound alerts for new incoming orders!</span>
+</div>
+
+<div class="container py-4 mb-5">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
+        <div>
+            <h3 class="fw-bold mb-0">Vendor Dashboard</h3>
+            <p class="text-muted small mb-0">Welcome back, {{ request.user.first_name }}! Here's your live store overview.</p>
+        </div>
+        <a href="{% url 'vendor_products' %}" class="btn btn-orange rounded-pill px-4 fw-bold shadow-sm w-100 w-md-auto text-center">
+            <i class="bi bi-box-seam me-1"></i> Manage Products
+        </a>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-3" style="border-left: 4px solid var(--fastx-orange) !important;">
+                <div class="d-flex align-items-center">
+                    <div class="bg-warning bg-opacity-10 p-2 p-md-3 rounded-3 me-2 me-md-3 text-warning d-none d-sm-block">
+                        <i class="bi bi-currency-rupee fs-4"></i>
+                    </div>
+                    <div>
+                        <p class="text-muted small fw-bold mb-0 text-uppercase" style="font-size: 0.7rem;">Today's Sales</p>
+                        <h4 class="fw-bold mb-0 text-truncate">₹{{ stats.today_sales|default:"0.00" }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-3" style="border-left: 4px solid var(--fastx-sky) !important;">
+                <div class="d-flex align-items-center">
+                    <div class="bg-info bg-opacity-10 p-2 p-md-3 rounded-3 me-2 me-md-3 text-info d-none d-sm-block">
+                        <i class="bi bi-box-seam fs-4"></i>
+                    </div>
+                    <div>
+                        <p class="text-muted small fw-bold mb-0 text-uppercase" style="font-size: 0.7rem;">Active Orders</p>
+                        <h4 class="fw-bold mb-0">{{ stats.active_orders|default:"0" }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-3" style="border-left: 4px solid #dc3545 !important;">
+                <div class="d-flex align-items-center">
+                    <div class="bg-danger bg-opacity-10 p-2 p-md-3 rounded-3 me-2 me-md-3 text-danger d-none d-sm-block">
+                        <i class="bi bi-truck fs-4"></i>
+                    </div>
+                    <div>
+                        <p class="text-muted small fw-bold mb-0 text-uppercase" style="font-size: 0.7rem;">To Dispatch</p>
+                        <h4 class="fw-bold mb-0">{{ stats.pending_shipments|default:"0" }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-3" style="border-left: 4px solid var(--fastx-navy) !important;">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary bg-opacity-10 p-2 p-md-3 rounded-3 me-2 me-md-3 text-primary d-none d-sm-block">
+                        <i class="bi bi-star-fill fs-4"></i>
+                    </div>
+                    <div class="w-100 overflow-hidden">
+                        <p class="text-muted small fw-bold mb-0 text-uppercase" style="font-size: 0.7rem;">Top Product</p>
+                        <h6 class="fw-bold mb-0 text-truncate">{{ stats.top_product|default:"None" }}</h6>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden position-sticky" style="top: 100px;">
+                <div class="list-group list-group-flush">
+                    <a href="{% url 'vendor_dashboard' %}" class="list-group-item list-group-item-action py-3 fw-bold active" style="background-color: var(--fastx-navy); color: white;">
+                        <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                    </a>
+                    <a href="{% url 'vendor_products' %}" class="list-group-item list-group-item-action py-3 fw-medium">
+                        <i class="bi bi-box me-2"></i> My Products
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action py-3 fw-medium d-flex justify-content-between align-items-center">
+                        <div><i class="bi bi-cart-check me-2"></i> Incoming Orders</div>
+                        <span class="badge bg-danger rounded-pill">{{ stats.active_orders|default:"0" }}</span>
+                    </a>
+                    <a href="{% url 'vendor_order_history' %}" class="list-group-item list-group-item-action py-3 fw-medium">
+                        <i class="bi bi-clock-history me-2"></i> Order History
+                    </a>
+                    <a href="{% url 'vendor_earnings' %}" class="list-group-item list-group-item-action py-3 fw-medium">
+                        <i class="bi bi-wallet2 me-2"></i> Earnings & Payouts
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-9">
+            <div class="card border-0 shadow-sm rounded-4 p-3 p-md-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-lightning-charge text-warning"></i> Live Fulfillment</h5>
+                    <a href="{% url 'vendor_order_history' %}" class="btn btn-sm btn-outline-secondary rounded-pill shadow-sm d-none d-sm-inline-block">
+                        <i class="bi bi-clock-history me-1"></i> Past Orders
+                    </a>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle" style="min-width: 900px;">
+                        <thead class="table-light text-muted small text-uppercase">
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Customer Info</th>
+                                <th style="min-width: 200px;">Order Items</th>
+                                <th>Status & Amount</th>
+                                <th>Delivery Partner</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in recent_orders %}
+                            <tr class="order-row" 
+                                data-order-id="{{ order.order_id }}" 
+                                data-id="{{ order.id }}"
+                                data-start-time="{{ order.assignment_start_time|date:'c' }}"
+                                data-assignment-status="{{ order.assignment_status|default:'none'|lower }}">
+                                
+                                <td class="fw-bold text-dark">#{{ order.order_id }}</td>
+                                
+                                <td>
+                                    <span class="d-block fw-bold text-dark">{{ order.user.first_name }}</span>
+                                    <span class="badge bg-light text-dark border mt-1">
+                                        <i class="bi bi-telephone text-success"></i> {{ order.user.customer_profile.phone_number|default:"No Phone" }}
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <ul class="list-unstyled mb-0 small">
+                                        {% for item in order.items.all %}
+                                            <li class="mb-1 border-bottom pb-1 border-light">
+                                                <span class="badge bg-secondary rounded-pill me-1">{{ item.quantity }}x</span> 
+                                                <span class="text-dark fw-medium">{{ item.product_name }}</span>
+                                            </li>
+                                        {% empty %}
+                                            <li class="text-muted fst-italic">Items loading...</li>
+                                        {% endfor %}
+                                    </ul>
+                                </td>
+
+                                <td>
+                                    <span class="badge mb-1 d-inline-block
+                                        {% if order.status == 'Confirmed' %}bg-warning text-dark
+                                        {% elif order.status == 'Packed' %}bg-info text-dark
+                                        {% elif order.status == 'Dispatched' %}bg-primary
+                                        {% elif order.status == 'Out_for_Delivery' %}bg-secondary
+                                        {% elif order.status == 'Not_Reachable' %}bg-danger
+                                        {% else %}bg-success{% endif %}">
+                                        {{ order.get_status_display }}
+                                    </span>
+                                    <span class="d-block fw-bold text-success">₹{{ order.total_amount }}</span>
+                                </td>
+                                
+                                <td>
+                                    {% if order.status == 'Confirmed' %}
+                                        <small class="text-muted fst-italic"><i class="bi bi-box me-1"></i>Pack order first</small>
+                                    {% else %}
+                                        {% if order.rider %}
+                                            <div class="d-flex align-items-center mb-1">
+                                                <div class="bg-light rounded-circle p-1 me-2"><i class="bi bi-scooter text-orange"></i></div>
+                                                <div>
+                                                    <span class="fw-bold d-block text-dark" style="font-size: 0.85rem;">{{ order.rider.first_name }}</span>
+                                                    <span class="badge bg-light text-dark border mt-1" style="font-size: 0.75rem;">
+                                                        <i class="bi bi-telephone text-primary"></i> {{ order.rider.rider_profile.phone_number }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="d-flex align-items-center mt-2">
+                                                <span class="rounded-circle d-inline-block me-1" style="width: 8px; height: 8px; 
+                                                    {% if order.assignment_status|lower == 'accepted' %}background-color: #198754;
+                                                    {% elif order.assignment_status|lower == 'rejected' %}background-color: #dc3545;
+                                                    {% else %}background-color: #ffc107;{% endif %}">
+                                                </span>
+                                                <small class="text-muted fw-bold">{{ order.assignment_status|default:"Pending"|title }}</small>
+                                            </div>
+                                        {% else %}
+                                            <small class="text-muted fst-italic">Waiting for Assignment</small>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+
+                                <td class="text-end">
+                                    <div class="d-flex flex-column gap-2 align-items-end">
+                                        
+                                        <div class="d-flex justify-content-end gap-1">
+                                            <a href="{% url 'generate_invoice' order.id 'seller' %}?vendor_id={{ request.user.vendor_profile.id }}" 
+                                               target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                                <i class="bi bi-receipt"></i> Bill
+                                            </a>
+
+                                            {% if order.status == 'Confirmed' %}
+                                                <button class="btn btn-sm btn-info text-white rounded-pill px-3 fw-bold" onclick="updateStatus('{{ order.id }}', 'Packed')">Pack</button>
+                                                <button class="btn btn-sm btn-outline-danger rounded-pill px-2" onclick="updateStatus('{{ order.id }}', 'Cancelled')" title="Cancel Order"><i class="bi bi-x-circle"></i></button>
+                                            
+                                            {% elif order.status == 'Packed' %}
+                                                {% if order.assignment_status|lower == 'accepted' %}
+                                                    <button class="btn btn-sm btn-primary rounded-pill px-3 fw-bold" onclick="updateStatus('{{ order.id }}', 'Dispatched')">Dispatch</button>
+                                                {% endif %}
+                                            
+                                            {% elif order.status == 'Dispatched' %}
+                                                <button class="btn btn-sm btn-warning text-dark rounded-pill px-3 fw-bold mt-1" onclick="updateStatus('{{ order.id }}', 'Out_for_Delivery')">Out for Delivery</button>
+                                            
+                                            {% elif order.status == 'Not_Reachable' %}
+                                                <button class="btn btn-sm btn-danger rounded-pill px-3 fw-bold mt-1" onclick="updateStatus('{{ order.id }}', 'Cancelled')">
+                                                    <i class="bi bi-x-circle"></i> Cancel Order
+                                                </button>
+                                            {% endif %}
+                                        </div>
+
+                                        {% if order.status == 'Packed' %}
+                                            <div id="action-area-{{ order.id }}" class="mt-1">
+                                                {% if order.assignment_status|lower == 'pending' and order.rider %}
+                                                    <span class="badge bg-warning text-dark d-inline-block mb-1 countdown-badge" id="timer-{{ order.id }}">
+                                                        <i class="bi bi-hourglass-split"></i> Awaiting: 60s
+                                                    </span>
+                                                {% endif %}
+
+                                                <button class="btn btn-sm btn-outline-navy rounded-pill px-3 assign-btn" 
+                                                        id="assign-btn-{{ order.id }}"
+                                                        onclick="setRiderOrderId('{{ order.id }}')" 
+                                                        data-bs-toggle="modal" data-bs-target="#assignRiderModal"
+                                                        {% if order.rider and order.assignment_status|lower == 'pending' or order.assignment_status|lower == 'accepted' %}style="display: none;"{% endif %}>
+                                                    <i class="bi bi-person-plus"></i> {% if order.rider %}Reassign Rider{% else %}Assign Rider{% endif %}
+                                                </button>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    <i class="bi bi-cup-hot fs-1 d-block mb-3 opacity-50"></i>
+                                    <h5>No active orders right now.</h5>
+                                    <p class="small">When customers place an order, it will appear here instantly.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ASSIGN RIDER MODAL -->
+<div class="modal fade" id="assignRiderModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom-0 pb-0 pt-4 px-4">
+                <h5 class="modal-title fw-bold"><i class="bi bi-scooter text-orange me-2"></i>Assign Delivery Partner</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <div class="modal-body p-4">
+                <div class="input-group mb-4 shadow-sm rounded-pill overflow-hidden border">
+                    <span class="input-group-text bg-white border-0 ps-3"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" id="riderSearch" class="form-control border-0 py-2 shadow-none" placeholder="Search by name or number..." onkeyup="filterRiders()">
+                </div>
+
+                <h6 class="fw-bold small text-muted text-uppercase mb-3">Available Partners Nearby</h6>
+                
+                <div class="list-group border-0" id="riderList">
+                    {% for rider in delivery_partners %}
+                        <div class="list-group-item border-0 border-bottom py-3 px-0 rider-item d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-3 shadow-sm" style="width: 45px; height: 45px;">
+                                    <i class="bi bi-person-fill fs-5 text-navy"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-0 rider-name text-dark">{{ rider.first_name }} {{ rider.last_name }}</h6>
+                                    <span class="badge bg-light text-dark border mt-1 rider-phone">
+                                        <i class="bi bi-telephone text-success me-1"></i> {{ rider.rider_profile.phone_number|default:"No Phone" }}
+                                    </span>
+                                </div>
+                            </div>
+                            <button class="btn btn-sm btn-navy rounded-pill px-3 fw-bold shadow-sm" onclick="assignRider('{{ rider.id }}')">Assign</button>
+                        </div>
+                    {% empty %}
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-scooter fs-2 d-block opacity-50 mb-2"></i>
+                            <p>No delivery partners currently online.</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AUDIO ELEMENT FOR NEW ORDER ALERT -->
+<audio id="newOrderSound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+
+<script>
+    // --- 1. NEW ORDER ALERT LOGIC ---
+    document.addEventListener("DOMContentLoaded", function() {
+        const audio = document.getElementById("newOrderSound");
+        const banner = document.getElementById("soundEnableBanner");
+        
+        // Show banner if sound hasn't been unlocked in this session
+        if (!sessionStorage.getItem('fastx_sound_unlocked')) {
+            banner.style.display = 'block';
+        }
+
+        window.enableSound = function() {
+            audio.play().then(() => {
+                audio.pause(); 
+                audio.currentTime = 0; 
+                sessionStorage.setItem('fastx_sound_unlocked', 'true');
+                banner.style.display = 'none';
+            }).catch(err => console.log(err));
+        };
+
+        // Determine highest Order ID currently on the page
+        let currentHighestId = 0;
+        document.querySelectorAll('.order-row').forEach(row => {
+            let id = parseInt(row.getAttribute('data-id'));
+            if (id > currentHighestId) {
+                currentHighestId = id;
+            }
+        });
+
+        // Compare with LocalStorage to detect new order after page reload
+        let storedHighestId = localStorage.getItem('fastx_vendor_latest_order');
+        if (storedHighestId) {
+            storedHighestId = parseInt(storedHighestId);
+            if (currentHighestId > storedHighestId) {
+                // IT'S A NEW ORDER! Play sound if unlocked
+                if (sessionStorage.getItem('fastx_sound_unlocked')) {
+                    audio.play().catch(e => {
+                        banner.style.display = 'block'; 
+                    });
+                }
+            }
+        }
+        
+        // Save the current highest ID for the next auto-reload check
+        if (currentHighestId > 0) {
+            localStorage.setItem('fastx_vendor_latest_order', currentHighestId);
+        }
+    });
+
+    // --- 2. COUNTDOWN TIMER LOGIC ---
+    setInterval(function() {
+        const now = new Date().getTime();
+        document.querySelectorAll('.order-row').forEach(row => {
+            const status = row.getAttribute('data-assignment-status');
+            const dbId = row.getAttribute('data-id');
+            const timerBadge = document.getElementById(`timer-${dbId}`);
+            const assignBtn = document.getElementById(`assign-btn-${dbId}`);
+
+            if (status === 'pending' && timerBadge) {
+                const startTimeStr = row.getAttribute('data-start-time');
+                if (startTimeStr) {
+                    const startTime = new Date(startTimeStr).getTime();
+                    const diffSeconds = Math.floor((now - startTime) / 1000);
+                    const remaining = 60 - diffSeconds;
+
+                    if (remaining > 0) {
+                        timerBadge.innerHTML = `<i class="bi bi-hourglass-split"></i> Awaiting: ${remaining}s`;
+                    } else {
+                        row.style.backgroundColor = "#fff3cd"; 
+                        timerBadge.className = "badge bg-danger d-inline-block mb-1 me-2";
+                        timerBadge.innerHTML = `<i class="bi bi-clock-history"></i> Request Expired`;
+                        if (assignBtn) {
+                            assignBtn.style.display = "inline-block";
+                            assignBtn.innerHTML = `<i class="bi bi-person-plus"></i> Reassign Rider`;
+                        }
+                    }
+                }
+            }
+        });
+    }, 1000);
+
+    // --- 3. AUTO PAGE REFRESH (Data Synchronization) ---
+    setInterval(function() {
+        const modalElement = document.getElementById('assignRiderModal');
+        if (!modalElement || !modalElement.classList.contains('show')) {
+            location.reload();
+        }
+    }, 10000);
+
+    let currentAssignOrderId = null;
+
+    function setRiderOrderId(orderId) {
+        currentAssignOrderId = orderId;
+    }
+
+    // --- 4. API CALLS ---
+    function updateStatus(orderId, newStatus) {
+        if(newStatus === 'Cancelled') {
+            if(!confirm("Are you sure you want to cancel this order? This cannot be undone.")) return;
+        }
+
+        fetch(`/vendor-api/update-order-status/${orderId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ status: newStatus })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) {
+                location.reload();
+            } else {
+                alert("Error updating order status: " + (data.error || "Unknown error"));
+            }
+        })
+        .catch(error => { console.error("Status Update Error:", error); });
+    }
+
+    function assignRider(riderId) {
+        if (!currentAssignOrderId) return;
+        
+        fetch(`/vendor-api/assign-rider/${currentAssignOrderId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ rider_id: riderId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) {
+                location.reload();
+            } else {
+                alert("Error assigning rider: " + (data.error || "Unknown error"));
+            }
+        })
+        .catch(error => { console.error("Assign Rider Error:", error); });
+    }
+
+    function filterRiders() {
+        let input = document.getElementById("riderSearch").value.toLowerCase();
+        let items = document.querySelectorAll(".rider-item");
+        
+        items.forEach(function(item) {
+            let name = item.querySelector(".rider-name").innerText.toLowerCase();
+            let phone = item.querySelector(".rider-phone").innerText.toLowerCase();
+            if (name.includes(input) || phone.includes(input)) {
+                item.classList.remove("d-none");
+                item.classList.add("d-flex");
+            } else {
+                item.classList.remove("d-flex");
+                item.classList.add("d-none");
+            }
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+
+{% block title %}Rider Login | FASTX{% endblock %}
+
+{% block content %}
+<style>
+    /* Premium Login Wrapper */
+    .rider-login-wrapper {
+        min-height: 80vh;
+        display: flex;
+        align-items: center;
+        background: linear-gradient(135deg, rgba(10, 31, 68, 0.85), rgba(10, 31, 68, 0.6)), 
+                    url('https://images.unsplash.com/photo-1617511453913-c28ff3a358fb?auto=format&fit=crop&q=80&w=2070') center/cover no-repeat;
+        border-radius: 24px;
+        margin: 2rem auto;
+        overflow: hidden;
+    }
+    
+    /* Frosted Glass Card Effect */
+    .login-glass-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 24px;
+    }
+
+    /* Input Focus Styles */
+    .form-control:focus {
+        border-color: #FF6B00 !important;
+        box-shadow: none !important;
+    }
+
+    /* Animated Gradient Button */
+    .btn-rider {
+        background: linear-gradient(45deg, #FF6B00, #ff8e3c);
+        border: none;
+        color: white;
+        transition: all 0.3s ease;
+    }
+    .btn-rider:hover:not(:disabled) {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(255, 107, 0, 0.3);
+        color: white;
+    }
+    .btn-rider:disabled {
+        background: #cccccc;
+        cursor: not-allowed;
+    }
+    .letter-spacing-2 { letter-spacing: 0.5rem; }
+</style>
+
+<div class="container mb-5">
+    <div class="rider-login-wrapper shadow-lg">
+        <div class="container">
+            <div class="row align-items-center justify-content-between p-4 p-md-5">
+                
+                <div class="col-lg-6 text-white mb-5 mb-lg-0 d-none d-md-block text-center text-lg-start pe-lg-5">
+                    <span class="badge bg-white text-dark mb-3 px-3 py-2 rounded-pill fw-bold shadow-sm">
+                        <i class="bi bi-star-fill text-warning me-1"></i> Join the Elite Fleet
+                    </span>
+                    <h1 class="display-4 fw-bolder mb-3" style="text-shadow: 2px 2px 8px rgba(0,0,0,0.4);">Drive your own success.</h1>
+                    <p class="lead fw-medium opacity-75" style="text-shadow: 1px 1px 4px rgba(0,0,0,0.4);">
+                        Log in to your FASTX partner dashboard to track earnings, accept orders, and manage your shifts with lightning speed.
+                    </p>
+                </div>
+
+                <div class="col-lg-5 col-md-8 mx-auto">
+                    <div class="card login-glass-card shadow-lg p-4 p-sm-5">
+                        <div class="text-center mb-4">
+                            <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3 shadow" style="width: 75px; height: 75px;">
+                                <i class="bi bi-scooter fs-1" style="color: #FF6B00;"></i>
+                            </div>
+                            <h3 class="fw-bolder mb-1" style="color: #0A1F44;">Partner Login</h3>
+                            <p class="text-muted small">Verify your mobile number to securely access your dashboard.</p>
+                        </div>
+                        
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-danger border-0 shadow-sm rounded-4 small d-flex align-items-center">
+                                    <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i> {{ message }}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <form method="POST" action="{% url 'rider_login' %}">
+                            {% csrf_token %}
+                            
+                            <!-- Phone Number Input ONLY -->
+                            <label class="form-label small fw-bold text-muted ms-1">Registered Mobile Number</label>
+                            <div class="input-group input-group-lg mb-3 shadow-sm rounded-4 overflow-hidden border bg-white">
+                                <span class="input-group-text bg-white border-0 text-muted"><i class="bi bi-telephone"></i></span>
+                                <input type="tel" name="phone" id="phone_number" class="form-control bg-transparent border-0 ps-0 shadow-none" placeholder="10-digit number" required pattern="[0-9]{10}" maxlength="10">
+                                <button type="button" class="btn btn-dark fw-bold px-3 m-1 rounded" id="btn-send-otp" onclick="requestOTP()">Get OTP</button>
+                            </div>
+                            
+                            <!-- Hidden OTP Input -->
+                            <div class="mb-4 p-3 bg-light border border-primary border-opacity-25 rounded-4 d-none transition-all" id="otp-block">
+                                <label class="form-label text-primary fw-bold small"><i class="bi bi-chat-text me-1"></i> Enter 6-Digit OTP</label>
+                                <div class="input-group shadow-sm rounded-pill overflow-hidden border bg-white">
+                                    <input type="text" id="otp_input" class="form-control border-0 text-center fw-bold letter-spacing-2 py-2 shadow-none" placeholder="• • • • • •" maxlength="6" autocomplete="one-time-code">
+                                    <button type="button" class="btn btn-success fw-bold px-4" id="btn-verify-otp" onclick="verifyOTP()">Verify</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Disabled until OTP is verified -->
+                            <button type="submit" id="final-submit-btn" class="btn btn-rider w-100 rounded-pill py-3 fw-bold fs-5 shadow-sm mt-3" disabled>
+                                Login to Dashboard <i class="bi bi-arrow-right ms-2"></i>
+                            </button>
+                        </form>
+                        
+                        <div class="text-center mt-4 border-top pt-3">
+                            <p class="small text-muted mb-0">Don't have an account? <a href="{% url 'rider_register' %}" class="fw-bold text-decoration-none" style="color: #FF6B00;">Apply Now</a></p>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function requestOTP() {
+        let phone = document.getElementById('phone_number').value.trim();
+        if(phone.length !== 10) { 
+            alert("Please enter a valid 10-digit mobile number."); 
+            return; 
+        }
+        
+        let btn = document.getElementById('btn-send-otp');
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+        btn.disabled = true;
+        
+        fetch('/api/send-otp/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+            // Triggers the "Rider Login" context in your Twilio SMS
+            body: JSON.stringify({phone: phone, action: 'rider_login'}) 
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) {
+                document.getElementById('phone_number').readOnly = true;
+                document.getElementById('otp-block').classList.remove('d-none');
+                btn.innerHTML = 'Resend';
+                btn.classList.replace('btn-dark', 'btn-outline-secondary');
+                btn.disabled = false;
+            } else {
+                alert(data.error || "Failed to send OTP.");
+                btn.innerHTML = 'Get OTP';
+                btn.disabled = false;
+            }
+        })
+        .catch(err => {
+            alert("Network error occurred.");
+            btn.innerHTML = 'Get OTP';
+            btn.disabled = false;
+        });
+    }
+
+    function verifyOTP() {
+        let phone = document.getElementById('phone_number').value.trim();
+        let otp = document.getElementById('otp_input').value.trim();
+        
+        if(otp.length !== 6) {
+            alert("Please enter the full 6-digit OTP.");
+            return;
+        }
+
+        let btn = document.getElementById('btn-verify-otp');
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        btn.disabled = true;
+        
+        fetch('/api/verify-otp/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+            body: JSON.stringify({phone: phone, otp: otp})
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) {
+                document.getElementById('otp-block').innerHTML = '<div class="text-center p-2"><h6 class="text-success fw-bold mb-0"><i class="bi bi-check-circle-fill me-2"></i> Verified Successfully</h6></div>';
+                // Unlock the login button
+                document.getElementById('final-submit-btn').disabled = false;
+            } else {
+                alert(data.error || "Invalid OTP code.");
+                btn.innerHTML = 'Verify';
+                btn.disabled = false;
+            }
+        })
+        .catch(err => {
+            alert("Network error occurred.");
+            btn.innerHTML = 'Verify';
+            btn.disabled = false;
+        });
+    }
+</script>
+{% endblock %}

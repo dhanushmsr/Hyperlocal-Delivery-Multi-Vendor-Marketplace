@@ -1,0 +1,240 @@
+{% extends 'base.html' %}
+
+{% block title %}Earnings & Analytics | FASTX Vendor{% endblock %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    @media print {
+        body { background: white; padding: 0; margin: 0; font-size: 12px; }
+        .fastx-navbar, .fastx-footer, .no-print { display: none !important; }
+        * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        .print-header { display: block !important; margin-bottom: 20px; }
+        .card { border: 1px solid #dee2e6 !important; box-shadow: none !important; break-inside: avoid; page-break-inside: avoid; padding: 15px !important; }
+        .col-lg-3.no-print { display: none; }
+        .col-lg-9 { width: 100% !important; max-width: 100% !important; flex: 0 0 100% !important; padding: 0 !important; }
+        .stats-row { display: flex !important; flex-wrap: nowrap !important; width: 100%; gap: 10px; margin: 0 0 20px 0 !important; }
+        .stats-row > div { width: 25% !important; flex: 1; max-width: 25% !important; margin: 0; padding: 0; }
+        .chart-container { width: 100% !important; max-width: 100% !important; }
+        canvas#salesChart { max-width: 100% !important; width: 100% !important; height: auto !important; }
+        .tables-row { display: flex !important; flex-wrap: nowrap !important; width: 100%; gap: 15px; margin: 0 !important;}
+        .tables-row > div { width: 50% !important; flex: 1; max-width: 50% !important; margin: 0; padding: 0; }
+    }
+    .print-header { display: none; }
+</style>
+
+<div class="container py-4 mb-5">
+    <div class="print-header text-center">
+        <h2>FASTX Vendor Performance Report</h2>
+        <p>Generated on: {% now "F j, Y" %} | Store: {{ request.user.vendor_profile.business_name|default:request.user.first_name }}</p>
+        <hr>
+    </div>
+
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3 no-print">
+        <div>
+            <h3 class="fw-bold mb-0">Earnings & Analytics</h3>
+            <p class="text-muted small mb-0">Track your store's performance and manage payouts.</p>
+        </div>
+        <button onclick="window.print()" class="btn btn-dark rounded-pill px-4 fw-bold shadow-sm w-100 w-md-auto">
+            <i class="bi bi-printer me-1"></i> Export PDF Report
+        </button>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-3 no-print">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden position-sticky" style="top: 100px;">
+                <div class="list-group list-group-flush">
+                    <a href="{% url 'vendor_dashboard' %}" class="list-group-item list-group-item-action py-3 fw-medium">
+                        <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                    </a>
+                    <a href="{% url 'vendor_products' %}" class="list-group-item list-group-item-action py-3 fw-medium">
+                        <i class="bi bi-box me-2"></i> My Products
+                    </a>
+                    <a href="{% url 'vendor_order_history' %}" class="list-group-item list-group-item-action py-3 fw-medium">
+                        <i class="bi bi-clock-history me-2"></i> Order History & Bills
+                    </a>
+                    <a href="{% url 'vendor_earnings' %}" class="list-group-item list-group-item-action py-3 fw-bold active" style="background-color: var(--fastx-navy); color: white;">
+                        <i class="bi bi-graph-up-arrow me-2"></i> Earnings & Analytics
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-9">
+            <!-- Analytics Cards Row -->
+            <div class="row g-3 mb-4 stats-row">
+                <div class="col-6 col-md-3">
+                    <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100 bg-light">
+                        <h6 class="text-muted fw-bold text-uppercase small" style="font-size: 0.7rem;">Total Income</h6>
+                        <h4 class="fw-bold text-success mb-0">₹{{ gross_income }}</h4>
+                        <small class="text-muted" style="font-size: 0.65rem;">From {{ total_orders }} orders</small>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100 bg-light border-danger border-start border-3">
+                        <h6 class="text-muted fw-bold text-uppercase small" style="font-size: 0.7rem;">Total GST (5%)</h6>
+                        <h4 class="fw-bold text-danger mb-0">₹{{ tax_deduction }}</h4>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100 bg-light border-warning border-start border-3">
+                        <h6 class="text-muted fw-bold text-uppercase small" style="font-size: 0.7rem;">Logistics Fees</h6>
+                        <h4 class="fw-bold text-warning mb-0">₹0.00</h4>
+                        <small class="text-muted" style="font-size: 0.65rem;">Covered by Platform</small>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100 text-white bg-dark">
+                        <h6 class="text-white opacity-75 fw-bold text-uppercase small" style="font-size: 0.7rem;">Payout Pending</h6>
+                        <h4 class="fw-bold mb-1 text-warning" id="payout-amount-display">₹{{ payout_pending }}</h4>
+                        
+                        {% if payout_pending > 0 %}
+                            <button id="verify-payout-btn" onclick="verifySettledPayout()" class="btn btn-xs btn-outline-warning rounded-pill py-0 px-2 small no-print" style="font-size:0.65rem;">
+                                <i class="bi bi-shield-check"></i> Verify Received
+                            </button>
+                        {% else %}
+                            <span class="badge bg-success small" style="font-size:0.6rem;"><i class="bi bi-check-all"></i> Settled & Verified</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 chart-container">
+                <h5 class="fw-bold mb-4"><i class="bi bi-bar-chart-fill text-primary me-2"></i>7-Day Sales Trend</h5>
+                <div style="position: relative; height: 300px; width: 100%;">
+                    <canvas id="salesChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Operational Sub-Tables -->
+            <div class="row g-4 tables-row">
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                        <h6 class="fw-bold mb-3"><i class="bi bi-star-fill text-warning me-2"></i>Top Selling Products</h6>
+                        <div class="table-responsive">
+                            <table class="table table-borderless align-middle small">
+                                <thead class="border-bottom">
+                                    <tr class="text-muted text-uppercase">
+                                        <th>Item</th>
+                                        <th class="text-end">Order Count</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for product in top_products %}
+                                    <tr>
+                                        <td class="fw-bold">
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-light rounded p-2 me-2"><i class="bi bi-box"></i></div>
+                                                {{ product.name }}
+                                            </div>
+                                        </td>
+                                        <td class="text-end text-navy fw-bold">{{ product.total_sold }} units</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr><td colspan="2" class="text-center text-muted py-3">No products items sold yet.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                        <h6 class="fw-bold mb-3"><i class="bi bi-scooter text-orange me-2"></i>Frequent Delivery Partners</h6>
+                        <div class="table-responsive">
+                            <table class="table table-borderless align-middle small">
+                                <thead class="border-bottom">
+                                    <tr class="text-muted text-uppercase">
+                                        <th>Rider Info</th>
+                                        <th class="text-end">Completed</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for rider in associated_riders %}
+                                    <tr>
+                                        <td class="fw-bold">
+                                            <span class="d-block"><i class="bi bi-person-circle text-muted me-1"></i> {{ rider.first_name }}</span>
+                                            <small class="text-muted" style="font-size:0.75rem;"><i class="bi bi-telephone"></i> {{ rider.rider_profile.phone_number }}</small>
+                                        </td>
+                                        <td class="text-end text-success fw-bold">{{ rider.vendor_delivery_count }} orders</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr><td colspan="2" class="text-center text-muted py-3">No riders assigned to your delivery history yet.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{{ chart_labels|json_script:"dynamic-labels" }}
+{{ chart_data|json_script:"dynamic-data" }}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const ctx = document.getElementById('salesChart').getContext('2d');
+        const labelsData = JSON.parse(document.getElementById('dynamic-labels').textContent);
+        const revenueData = JSON.parse(document.getElementById('dynamic-data').textContent);
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labelsData,
+                datasets: [{
+                    label: 'Revenue (₹)',
+                    data: revenueData,
+                    borderColor: '#0A1F44',
+                    backgroundColor: 'rgba(10, 31, 68, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: '#FF6B00',
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, grid: { borderDash: [5, 5] } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    });
+
+    // ASYNC PAYOUT CLEARING VERIFICATION FUNCTION
+    function verifySettledPayout() {
+        if(confirm("Confirm that you have securely verified this cleared account payout balance from the administration bank settlement transfer?")) {
+            fetch("/vendor-api/verify-payout/", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    document.getElementById('payout-amount-display').innerText = "₹0.00";
+                    const btn = document.getElementById('verify-payout-btn');
+                    if(btn) {
+                        btn.outerHTML = '<span class="badge bg-success small" style="font-size:0.6rem;"><i class="bi bi-check-all"></i> Settled & Verified</span>';
+                    }
+                }
+            })
+            .catch(err => { console.error("Error clearing verified payout balance data payload:", err); });
+        }
+    }
+</script>
+{% endblock %}

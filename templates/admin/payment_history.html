@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin | Master Payment Ledger{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-0 text-navy"><i class="bi bi-cash-coin text-success me-2"></i>Master Payment Ledger</h2>
+            <p class="text-muted mb-0">Track and review every cross-platform financial transaction running through FASTX.</p>
+        </div>
+        <form method="POST" action="{% url 'admin_clear_payment_history' %}" onsubmit="return confirm('Are you sure you want to permanently clear the payment ledger logs? This action cannot be undone.');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger rounded-pill fw-bold px-4 shadow-sm">
+                <i class="bi bi-trash3-fill me-2"></i>Clear All Logs
+            </button>
+        </form>
+    </div>
+
+    <!-- Live Financial Aggregate Metric Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-start border-primary border-4">
+                <small class="text-muted fw-bold text-uppercase d-block mb-1">Online Gateway Receipts</small>
+                <h3 class="fw-bold text-dark mb-0">₹{{ online_total }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-start border-info border-4">
+                <small class="text-muted fw-bold text-uppercase d-block mb-1">Internal Wallet Debits</small>
+                <h3 class="fw-bold text-dark mb-0">₹{{ wallet_total }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-start border-warning border-4">
+                <small class="text-muted fw-bold text-uppercase d-block mb-1">COD Cash Collected</small>
+                <h3 class="fw-bold text-dark mb-0">₹{{ cod_total }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-success bg-opacity-10 border border-success border-opacity-25 text-center">
+                <small class="text-success fw-bold text-uppercase d-block mb-1">Gross Network Revenue</small>
+                <h2 class="fw-bold text-success mb-0">₹{{ grand_revenue_total }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtering Bar Control Layout -->
+    <div class="card border-0 shadow-sm rounded-4 p-3 mb-4 bg-white">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <span class="fw-bold text-muted small text-uppercase"><i class="bi bi-funnel-fill me-1"></i>Filter Ledger</span>
+            <div class="btn-group btn-group-sm rounded-pill overflow-hidden border shadow-sm">
+                <a href="{% url 'admin_payment_history' %}" class="btn {% if selected_type == 'All' %}btn-dark{% else %}btn-light{% endif %} px-3">All Methods</a>
+                <a href="{% url 'admin_payment_history' %}?payment_type=Online" class="btn {% if selected_type == 'Online' %}btn-dark{% else %}btn-light{% endif %} px-3">Online Gateway Only</a>
+                <a href="{% url 'admin_payment_history' %}?payment_type=COD" class="btn {% if selected_type == 'COD' %}btn-dark{% else %}btn-light{% endif %} px-3">Cash on Delivery</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Core Transaction Ledger Table Ledger -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light border-bottom text-muted small text-uppercase fw-bold">
+                    <tr>
+                        <th class="ps-4 py-3">Order ID</th>
+                        <th class="py-3">Customer Profile</th>
+                        <th class="py-3">Fulfillment Store</th>
+                        <th class="py-3">Payment Channel</th>
+                        <th class="py-3">Settlement State</th>
+                        <th class="py-3 text-end pe-4">Settled Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in transactions %}
+                    <tr class="border-bottom border-light">
+                        <td class="ps-4 fw-bold text-navy py-3">#{{ order.order_id }}</td>
+                        <td>
+                            <span class="fw-medium text-dark d-block mb-0">{{ order.user.get_full_name|default:order.user.email }}</span>
+                            <small class="text-muted">{{ order.created_at|date:"M d, Y · h:i A" }}</small>
+                        </td>
+                        <td class="fw-semibold text-muted">{{ order.vendor.business_name }}</td>
+                        <td>
+                            {% if order.payment_method == 'Online' %}
+                                <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill fw-bold"><i class="bi bi-credit-card-2-front-fill me-1"></i>Online Gateway</span>
+                            {% else %}
+                                <span class="badge bg-warning bg-opacity-10 text-warning px-3 py-2 rounded-pill fw-bold"><i class="bi bi-cash-coin me-1"></i>Doorstep COD</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if order.is_paid or order.status == 'Delivered' %}
+                                <span class="badge bg-success bg-opacity-10 text-success px-3 py-1 rounded-pill fw-semibold"><i class="bi bi-check-circle-fill me-1"></i>Settled</span>
+                            {% else %}
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary px-3 py-1 rounded-pill fw-semibold"><i class="bi bi-hourglass-split me-1"></i>In Transit</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-4 fw-bold fs-5 text-dark">₹{{ order.total_amount }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-receipt display-4 opacity-25 d-block mb-3"></i>
+                            No transaction ledger histories are currently on record.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

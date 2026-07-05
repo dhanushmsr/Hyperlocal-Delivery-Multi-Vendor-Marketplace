@@ -1,0 +1,763 @@
+{% extends 'base.html' %}
+
+{% block title %}FASTX | Secure Checkout{% endblock %}
+
+{% block content %}
+<style>
+    .coupon-card { transition: transform 0.2s, box-shadow 0.2s; border: 1px dashed #ced4da; }
+    .coupon-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-color: var(--fastx-navy); cursor: pointer; }
+    .coupon-scroll-container { max-height: 250px; overflow-y: auto; overflow-x: hidden; padding-right: 5px; }
+    /* Custom Scrollbar for Coupons */
+    .coupon-scroll-container::-webkit-scrollbar { width: 6px; }
+    .coupon-scroll-container::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+    .coupon-scroll-container::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 10px; }
+    .coupon-scroll-container::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+</style>
+
+<div class="container py-4">
+    <h2 class="fw-bold mb-4" style="color: var(--fastx-navy);"><i class="bi bi-bag-check-fill text-warning me-2"></i>Review Your Basket</h2>
+    
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0">Items from Hub Store</h5>
+                    <span class="badge bg-light text-dark border" id="total-items-badge">0 Items</span>
+                </div>
+                <hr class="text-muted opacity-25 my-2">
+                
+                <div id="cart-items-container">
+                    {% for product_id, item in request.session.cart.items %}
+                    <div class="cart-item d-flex align-items-center justify-content-between py-3 border-bottom border-light" 
+                         id="product-row-{{ product_id }}" 
+                         data-product-id="{{ product_id }}"
+                         data-price="{{ item.price }}" 
+                         data-quantity="{{ item.quantity }}">
+                        <div class="d-flex align-items-center">
+                            <img src="{{ item.image }}" alt="{{ item.name }}" class="rounded-3 me-3 object-fit-cover" style="width: 70px; height: 70px;">
+                            <div>
+                                <span class="badge bg-light text-dark border px-2 py-1 rounded-pill small mb-1">{{ item.category|default:"Store Item" }}</span>
+                                <h6 class="fw-bold mb-0 text-dark">{{ item.name }}</h6>
+                                <small class="text-muted unit-price">₹{{ item.price }} / unit</small>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <span class="fw-bold text-dark d-block item-total">₹{{ item.total }}</span>
+                            <div class="btn-group btn-group-sm mt-2 shadow-sm rounded">
+                                <button class="btn btn-outline-dark px-2 py-0 btn-minus"><i class="bi bi-dash"></i></button>
+                                <span class="btn btn-light px-3 py-0 disabled fw-bold text-dark qty-display" id="qty-{{ product_id }}">{{ item.quantity }}</span>
+                                <button class="btn btn-outline-dark px-2 py-0 btn-plus"><i class="bi bi-plus"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="text-center py-5 {% if request.session.cart %}d-none{% endif %}" id="js-empty-cart-fallback">
+                    <i class="bi bi-cart-x display-1 text-muted opacity-50"></i>
+                    <p class="mt-3 fw-bold text-muted">Your cart is currently empty.</p>
+                    <a href="{% url 'customer_home' %}" class="btn btn-outline-dark rounded-pill mt-2 px-4 shadow-sm">Return to Store</a>
+                </div>
+            </div>
+            
+            <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+                <h5 class="fw-bold mb-3"><i class="bi bi-geo-alt text-orange me-2"></i>Delivery Location</h5>
+                
+                <ul class="nav nav-pills nav-fill bg-light rounded-pill p-1 mb-3" id="address-tabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active rounded-pill fw-medium" id="saved-tab" data-bs-toggle="pill" data-bs-target="#saved-address" type="button" role="tab">Saved Addresses</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link rounded-pill fw-medium" id="auto-tab" data-bs-toggle="pill" data-bs-target="#auto-address" type="button" role="tab">GPS Detect</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link rounded-pill fw-medium" id="manual-tab" data-bs-toggle="pill" data-bs-target="#manual-address" type="button" role="tab">Enter Manually</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="address-tab-content">
+                    <div class="tab-pane fade show active" id="saved-address" role="tabpanel">
+                        <div class="row g-3">
+                            {% for address in saved_addresses %}
+                            <div class="col-md-6">
+                                <label class="border rounded-3 p-3 d-block cursor-pointer position-relative {% if address.is_default %}bg-light border-primary{% endif %}" style="cursor: pointer;">
+                                    <input type="radio" name="selected_saved_address" id="{{ address.id }}" value="{{ address.flat_no }}, {{ address.street }}, {{ address.city }} - {{ address.pincode }}" class="form-check-input position-absolute top-0 end-0 m-3" {% if address.is_default %}checked{% endif %}>
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="bi bi-{% if address.title == 'Home' %}house{% elif address.title == 'Work' %}building{% else %}geo-alt{% endif %} text-muted fs-5 me-2"></i>
+                                        <strong class="mb-0">{{ address.title }}</strong>
+                                        {% if address.is_default %}<span class="badge bg-primary ms-2" style="font-size: 0.6rem;">Default</span>{% endif %}
+                                    </div>
+                                    <p class="text-muted small mb-0 lh-sm">
+                                        {{ address.flat_no }}, {{ address.street }}<br>
+                                        {{ address.city }} - {{ address.pincode }}
+                                    </p>
+                                </label>
+                            </div>
+                            {% empty %}
+                            <div class="col-12 text-center py-4">
+                                <p class="text-muted mb-0">No saved addresses found. Please use GPS or Enter Manually.</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="auto-address" role="tabpanel">
+                        <div class="text-center py-3">
+                            <button id="btn-locate" class="btn btn-outline-primary rounded-pill px-4">
+                                <i class="bi bi-crosshair me-1"></i> Fetch Live Location & Pincode
+                            </button>
+                        </div>
+                        <div id="auto-address-result" class="p-3 border border-primary border-opacity-25 rounded-3 bg-light d-none align-items-center">
+                            <div class="spinner-border spinner-border-sm text-primary me-3 d-none" id="location-spinner" role="status"></div>
+                            <div id="address-display" class="w-100">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <strong class="text-dark d-block" id="address-title">Location Found</strong>
+                                    <span class="badge bg-dark" id="address-pincode"></span>
+                                </div>
+                                <small class="text-muted mt-1 d-block" id="address-text"></small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="manual-address" role="tabpanel">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label small text-muted mb-1">House/Flat/Block No.</label>
+                                <input type="text" id="man_flat" class="form-control" placeholder="e.g. Flat 402, Block B">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small text-muted mb-1">Street / Area</label>
+                                <input type="text" id="man_street" class="form-control" placeholder="e.g. Main Street, Marathahalli">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small text-muted mb-1">City</label>
+                                <input type="text" id="man_city" class="form-control" placeholder="e.g. Bengaluru" value="Bengaluru">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small text-muted mb-1">Pincode</label>
+                                <input type="text" id="man_pincode" class="form-control" placeholder="e.g. 560037">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+                <h5 class="fw-bold mb-3"><i class="bi bi-credit-card-2-front text-info me-2"></i>Payment Method</h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="border rounded-3 p-3 d-block cursor-pointer position-relative bg-light" style="cursor: pointer;">
+                            <input type="radio" name="payment_method" value="Online" class="form-check-input position-absolute top-50 end-0 me-3 mt-0 translate-middle-y" checked>
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-qr-code-scan fs-3 text-primary me-3"></i>
+                                <div>
+                                    <strong class="d-block">Pay Online</strong>
+                                    <small class="text-muted">UPI, Cards, Wallets</small>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="border rounded-3 p-3 d-block cursor-pointer position-relative" style="cursor: pointer;">
+                            <input type="radio" name="payment_method" value="COD" class="form-check-input position-absolute top-50 end-0 me-3 mt-0 translate-middle-y">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-cash-coin fs-3 text-success me-3"></i>
+                                <div>
+                                    <strong class="d-block">Cash on Delivery</strong>
+                                    <small class="text-muted">Pay at doorstep</small>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="sticky-top" style="top: 100px;">
+                
+                <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold mb-0"><i class="bi bi-wallet2 text-success me-2"></i>FASTX Wallet</h6>
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">
+                            Bal: ₹<span id="available-wallet-balance">{% if request.user.wallet %}{{ request.user.wallet.balance }}{% else %}0.00{% endif %}</span>
+                        </span>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input fs-5 cursor-pointer" type="checkbox" role="switch" id="use-wallet-toggle">
+                        <label class="form-check-label ms-2 pt-1 fw-medium cursor-pointer" for="use-wallet-toggle">Apply wallet balance</label>
+                    </div>
+                </div>
+
+                <!-- OFFERS & COUPONS SECTION -->
+                <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+                    <h6 class="fw-bold mb-3"><i class="bi bi-tags-fill text-danger me-2"></i>Offers & Coupons</h6>
+                    
+                    <div class="input-group mb-2">
+                        <input type="text" id="coupon-input" class="form-control text-uppercase" placeholder="Enter coupon code">
+                        <button class="btn btn-dark px-3" id="btn-apply-coupon" type="button">Apply</button>
+                    </div>
+                    <div id="coupon-message" class="small d-none mb-3"></div>
+
+                    <div class="mt-3 border-top pt-3">
+                        <h6 class="small text-muted fw-bold text-uppercase mb-3">Available for you</h6>
+                        <div class="coupon-scroll-container d-flex flex-column gap-2">
+                            {% for c in available_coupons %}
+                            <div class="coupon-card rounded-3 p-3 bg-light" 
+                                 onclick="viewCouponDetails('{{ c.code }}', '{{ c.description|escapejs }}', '{{ c.min_order_value }}', '{{ c.category_restriction.name|default:'All Items' }}', '{{ c.discount_amount }}')">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="badge border border-dark text-dark fw-bold px-2 py-1" style="letter-spacing: 1px;">{{ c.code }}</span>
+                                    <span class="text-success fw-bold small">Save ₹{{ c.discount_amount }}</span>
+                                </div>
+                                <small class="text-muted d-block text-truncate">{{ c.description|default:"Tap to view terms & apply" }}</small>
+                            </div>
+                            {% empty %}
+                            <div class="text-center py-3">
+                                <small class="text-muted"><i class="bi bi-stars me-1"></i> No active offers at the moment.</small>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                    <h5 class="fw-bold mb-4 text-dark border-bottom pb-2">Bill Summary</h5>
+                    
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Item Subtotal</span>
+                        <span class="text-dark fw-medium" id="bill-subtotal">₹0.00</span>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mb-2 text-success d-none" id="discount-row">
+                        <span>Coupon Discount</span>
+                        <span class="fw-medium" id="bill-discount">-₹0.00</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Structured GST (5%)</span>
+                        <span class="text-dark fw-medium" id="bill-tax">₹0.00</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Delivery Fee</span>
+                        <span class="text-dark fw-medium" id="bill-delivery">₹0.00</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="text-muted">Handling Charge</span>
+                        <span class="text-dark fw-medium" id="bill-handling">₹0.00</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-3 text-success d-none" id="wallet-row">
+                        <span>Wallet Applied</span>
+                        <span class="fw-medium" id="bill-wallet-applied">-₹0.00</span>
+                    </div>
+                    
+                    <hr class="text-muted my-3 opacity-25">
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <strong class="fs-5 text-dark d-block">Grand Total</strong>
+                        </div>
+                        <span class="fs-3 fw-bold" style="color: var(--fastx-navy);" id="bill-grand-total">₹0.00</span>
+                    </div>
+
+                    <div class="d-grid">
+                        <button id="btn-place-order" class="btn btn-orange btn-lg rounded-pill shadow fw-bold">
+                            Place Order Now <i class="bi bi-arrow-right ms-2"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- COUPON DETAILS MODAL -->
+<div class="modal fade" id="couponDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-bottom-0 pb-0 pt-4 px-4 position-relative">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <div class="d-inline-block bg-light border border-dark rounded-3 px-4 py-2 mb-3" style="border-style: dashed !important;">
+                    <span class="fw-bold fs-4 text-dark letter-spacing-1" id="modalCouponCode"></span>
+                </div>
+                <h3 class="fw-bold text-success mb-2" id="modalCouponSave"></h3>
+                <p class="text-muted small mb-4" id="modalCouponDesc"></p>
+                
+                <div class="bg-light rounded-3 p-3 text-start mb-4 border">
+                    <h6 class="fw-bold small text-uppercase text-muted mb-3 border-bottom pb-2">Terms & Conditions</h6>
+                    <ul class="list-unstyled small mb-0">
+                        <li class="mb-2 d-flex"><i class="bi bi-cart-check text-orange me-2 mt-1"></i> <span>Minimum Order Value: <strong id="modalCouponMin"></strong></span></li>
+                        <li class="mb-2 d-flex"><i class="bi bi-box text-orange me-2 mt-1"></i> <span>Applicable on: <strong id="modalCouponCat"></strong></span></li>
+                        <li class="d-flex"><i class="bi bi-person-check text-orange me-2 mt-1"></i> <span>Valid for single use per customer account.</span></li>
+                    </ul>
+                </div>
+                
+                <button class="btn btn-dark w-100 rounded-pill fw-bold py-3 shadow-sm" id="modalApplyBtn" onclick="applyCouponFromModal()">Apply This Offer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- COD / 100% Wallet Success Modal -->
+<div class="modal fade" id="orderSuccessModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-body text-center p-5">
+                <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+                <h3 class="fw-bold mt-3">Order Placed!</h3>
+                <p class="text-muted mb-4">Your bill has been generated. Order ID: <strong id="modal-order-id">#FX-0000</strong></p>
+                <div class="bg-light p-3 rounded-3 mb-4 text-start">
+                    <div class="d-flex justify-content-between mb-2"><small>Total Paid:</small> <strong id="modal-amount">₹0.00</strong></div>
+                    <div class="d-flex justify-content-between mb-2"><small>Payment Mode:</small> <strong id="modal-payment">Online</strong></div>
+                    <div class="d-flex justify-content-between"><small>Est. Delivery:</small> <strong class="text-orange">10 Minutes</strong></div>
+                </div>
+                <a href="{% url 'track_orders' %}" class="btn btn-dark rounded-pill px-5">View Order Tracker</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- RAZORPAY SCRIPT -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    let currentDiscount = 0;
+    let appliedCouponCode = ""; 
+    
+    let walletBalance = parseFloat(document.getElementById('available-wallet-balance').innerText) || 0;
+    let isWalletApplied = false;
+    let finalWalletAppliedAmount = 0;
+    let finalGrandTotal = 0;
+
+    document.getElementById('use-wallet-toggle').addEventListener('change', function() {
+        isWalletApplied = this.checked;
+        calculateCart();
+    });
+
+    window.processCouponApplication = function(couponCode) {
+        let msg = document.getElementById('coupon-message');
+        let subtotalText = document.getElementById('bill-subtotal').innerText.replace('₹', '');
+        
+        msg.classList.remove('d-none');
+        msg.innerHTML = '<span class="spinner-border spinner-border-sm text-primary"></span> Validating...';
+        
+        if (couponCode === "") {
+            currentDiscount = 0; appliedCouponCode = ""; msg.classList.add('d-none'); calculateCart(); return;
+        }
+
+        fetch('/api/validate-coupon/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+            body: JSON.stringify({'code': couponCode, 'subtotal': subtotalText})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) {
+                currentDiscount = parseFloat(data.discount_amount);
+                appliedCouponCode = couponCode;
+                document.getElementById('coupon-input').value = couponCode; 
+                
+                msg.className = "small mt-2 text-success fw-bold d-block";
+                msg.innerHTML = `<i class="bi bi-check-circle-fill"></i> ${data.message}`;
+                
+                let modalEl = document.getElementById('couponDetailsModal');
+                let modalObj = bootstrap.Modal.getInstance(modalEl);
+                if(modalObj) modalObj.hide();
+                
+            } else {
+                currentDiscount = 0;
+                appliedCouponCode = "";
+                msg.className = "small mt-2 text-danger fw-bold d-block";
+                msg.innerHTML = `<i class="bi bi-x-circle-fill"></i> ${data.message}`;
+            }
+            calculateCart();
+        }).catch(err => {
+            msg.className = "small mt-2 text-danger fw-bold d-block";
+            msg.innerHTML = `<i class="bi bi-exclamation-circle-fill"></i> Network error verifying coupon.`;
+        });
+    }
+
+    window.viewCouponDetails = function(code, desc, minVal, cat, amt) {
+        document.getElementById('modalCouponCode').innerText = code;
+        document.getElementById('modalCouponSave').innerText = "Flat ₹" + amt + " OFF";
+        document.getElementById('modalCouponDesc').innerText = desc || "Apply this code at checkout to secure your discount.";
+        document.getElementById('modalCouponMin').innerText = "₹" + minVal;
+        document.getElementById('modalCouponCat').innerText = cat;
+        
+        let modal = new bootstrap.Modal(document.getElementById('couponDetailsModal'));
+        modal.show();
+    }
+
+    window.applyCouponFromModal = function() {
+        let code = document.getElementById('modalCouponCode').innerText.trim();
+        processCouponApplication(code);
+    }
+
+    document.getElementById('btn-apply-coupon').addEventListener('click', function() {
+        let input = document.getElementById('coupon-input').value.trim().toUpperCase();
+        processCouponApplication(input);
+    });
+
+    function calculateCart() {
+        let subtotal = 0;
+        let totalItems = 0;
+        let activeRows = 0;
+        
+        document.querySelectorAll('.cart-item').forEach(item => {
+            let price = parseFloat(item.getAttribute('data-price'));
+            let qty = parseInt(item.getAttribute('data-quantity'));
+            
+            if(qty > 0) {
+                activeRows++;
+                let itemTotal = price * qty;
+                subtotal += itemTotal;
+                totalItems += qty;
+                item.querySelector('.item-total').innerText = '₹' + itemTotal.toFixed(2);
+                item.querySelector('.qty-display').innerText = qty;
+            }
+        });
+
+        let fallbackContainer = document.getElementById('js-empty-cart-fallback');
+        if (activeRows === 0) {
+            if(fallbackContainer) fallbackContainer.classList.remove('d-none');
+        } else {
+            if(fallbackContainer) fallbackContainer.classList.add('d-none');
+        }
+
+        if (currentDiscount > subtotal) currentDiscount = subtotal;
+
+        let tax = (subtotal - currentDiscount) * 0.05; 
+        
+        // NEW DELIVERY LOGIC: 40 if under 150, 10 if over 150
+        let delivery = 0.00;
+        if (subtotal > 0 && subtotal < 150) {
+            delivery = 40.00;
+        } else if (subtotal >= 150) {
+            delivery = 10.00;
+        }
+
+        let handling = subtotal > 0 ? 5.00 : 0.00;
+        let grandTotalBeforeWallet = (subtotal > 0) ? (subtotal - currentDiscount) + tax + delivery + handling : 0.00;
+
+        finalWalletAppliedAmount = 0;
+        if (isWalletApplied && grandTotalBeforeWallet > 0) {
+            finalWalletAppliedAmount = Math.min(walletBalance, grandTotalBeforeWallet);
+        }
+        
+        finalGrandTotal = grandTotalBeforeWallet - finalWalletAppliedAmount;
+
+        document.getElementById('bill-subtotal').innerText = '₹' + subtotal.toFixed(2);
+        document.getElementById('bill-tax').innerText = '₹' + tax.toFixed(2);
+        document.getElementById('bill-delivery').innerText = '₹' + delivery.toFixed(2);
+        document.getElementById('bill-handling').innerText = '₹' + handling.toFixed(2);
+        
+        let walletRow = document.getElementById('wallet-row');
+        if (finalWalletAppliedAmount > 0) {
+            walletRow.classList.remove('d-none');
+            document.getElementById('bill-wallet-applied').innerText = '-₹' + finalWalletAppliedAmount.toFixed(2);
+        } else {
+            walletRow.classList.add('d-none');
+            if (isWalletApplied && grandTotalBeforeWallet === 0) {
+                document.getElementById('use-wallet-toggle').checked = false;
+                isWalletApplied = false;
+            }
+        }
+
+        document.getElementById('bill-grand-total').innerText = '₹' + finalGrandTotal.toFixed(2);
+        
+        document.getElementById('total-items-badge').innerText = totalItems + ' Items';
+        let globalBadge = document.getElementById('global-cart-count');
+        if(globalBadge) {
+            globalBadge.innerText = totalItems;
+        }
+
+        let discountRow = document.getElementById('discount-row');
+        if(currentDiscount > 0 && subtotal > 0) {
+            discountRow.classList.remove('d-none');
+            document.getElementById('bill-discount').innerText = '-₹' + currentDiscount.toFixed(2);
+        } else {
+            discountRow.classList.add('d-none');
+        }
+
+        let btnPlaceOrder = document.getElementById('btn-place-order');
+
+        // NEW MIN ORDER LOGIC: Removed minimum order restriction
+        if (activeRows === 0) {
+            btnPlaceOrder.disabled = true;
+        } else {
+            btnPlaceOrder.disabled = false;
+        }
+    }
+
+    function handleCartUpdate(productId, action, itemElement) {
+        fetch('/update-cart/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ product_id: productId, action: action })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'error') {
+                alert(data.message);
+                return;
+            }
+            
+            if (!data.cart || !data.cart[productId]) {
+                itemElement.setAttribute('data-quantity', 0);
+                let targetedRow = document.getElementById(`product-row-${productId}`);
+                if (targetedRow) targetedRow.remove();
+            } else {
+                let updatedQty = data.cart[productId].quantity;
+                itemElement.setAttribute('data-quantity', updatedQty);
+                let targetingDisplay = document.getElementById(`qty-${productId}`);
+                if (targetingDisplay) targetingDisplay.innerText = updatedQty;
+            }
+            calculateCart();
+        })
+        .catch(error => {
+            console.error('Cart processing error:', error);
+            alert("Could not process cart update. Please try again.");
+        });
+    }
+
+    document.querySelectorAll('.btn-plus').forEach(btn => {
+        btn.addEventListener('click', function() {
+            let item = this.closest('.cart-item');
+            let productId = item.getAttribute('data-product-id');
+            handleCartUpdate(productId, 'increase', item);
+        });
+    });
+
+    document.querySelectorAll('.btn-minus').forEach(btn => {
+        btn.addEventListener('click', function() {
+            let item = this.closest('.cart-item');
+            let productId = item.getAttribute('data-product-id');
+            handleCartUpdate(productId, 'decrease', item);
+        });
+    });
+
+    calculateCart();
+
+    document.getElementById('btn-locate').addEventListener('click', function() {
+        let resultContainer = document.getElementById('auto-address-result');
+        let spinner = document.getElementById('location-spinner');
+        let title = document.getElementById('address-title');
+        let text = document.getElementById('address-text');
+        let pincodeBadge = document.getElementById('address-pincode');
+        
+        resultContainer.classList.remove('d-none');
+        resultContainer.classList.add('d-flex');
+        spinner.classList.remove('d-none');
+        title.innerText = "Connecting to GPS...";
+        text.innerText = "Please allow location permissions...";
+        pincodeBadge.innerText = "";
+        
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    let lat = position.coords.latitude;
+                    let lon = position.coords.longitude;
+                    
+                    title.innerText = "Fetching Address Data...";
+                    
+                    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            spinner.classList.add('d-none');
+                            title.innerHTML = '<i class="bi bi-check-circle-fill text-success me-1"></i> Precise Location Secured';
+                            text.innerText = data.display_name;
+                            
+                            if(data.address && data.address.postcode) {
+                                pincodeBadge.innerText = "PIN: " + data.address.postcode;
+                            } else {
+                                pincodeBadge.innerText = "Pincode not found";
+                            }
+                        })
+                        .catch(error => {
+                            spinner.classList.add('d-none');
+                            title.innerHTML = '<i class="bi bi-exclamation-triangle text-warning me-1"></i> Partial Location Found';
+                            text.innerText = `Coordinates: ${lat.toFixed(4)}, ${lon.toFixed(4)} (Address fetch failed)`;
+                        });
+                },
+                function(error) {
+                    spinner.classList.add('d-none');
+                    title.innerHTML = '<i class="bi bi-exclamation-triangle text-danger me-1"></i> Location Denied';
+                    text.innerText = "Please enable location services in your browser settings.";
+                }
+            );
+        } else {
+            alert("Geolocation is not supported by this browser.");
+        }
+    });
+
+    function verifyPayment(payment_id, order_id, signature) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/payment/verify/';
+        
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = getCookie('csrftoken');
+        form.appendChild(csrfInput);
+        
+        const payIdInput = document.createElement('input');
+        payIdInput.type = 'hidden';
+        payIdInput.name = 'razorpay_payment_id';
+        payIdInput.value = payment_id;
+        form.appendChild(payIdInput);
+        
+        const ordIdInput = document.createElement('input');
+        ordIdInput.type = 'hidden';
+        ordIdInput.name = 'razorpay_order_id';
+        ordIdInput.value = order_id;
+        form.appendChild(ordIdInput);
+        
+        const sigInput = document.createElement('input');
+        sigInput.type = 'hidden';
+        sigInput.name = 'razorpay_signature';
+        sigInput.value = signature;
+        form.appendChild(sigInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    document.getElementById('btn-place-order').addEventListener('click', function() {
+        
+        // NO MINIMUM SUB-TOTAL LOGIC (Any amount allowed)
+        if(finalGrandTotal <= 0 && finalWalletAppliedAmount <= 0) {
+            alert("Your cart is empty!");
+            return;
+        }
+
+        let finalAddress = "Address not provided";
+        let addressId = ""; 
+        
+        let activeTab = document.querySelector('#address-tabs .nav-link.active').getAttribute('id');
+        
+        if (activeTab === 'saved-tab') {
+            let selectedSaved = document.querySelector('input[name="selected_saved_address"]:checked');
+            if (selectedSaved) {
+                finalAddress = selectedSaved.value;
+                addressId = selectedSaved.id || ""; 
+            } else { 
+                alert("Please select a saved address to proceed."); 
+                return; 
+            }
+        } 
+        else if (activeTab === 'auto-tab') {
+            let gpsAddress = document.getElementById('address-text').innerText;
+            let gpsPincode = document.getElementById('address-pincode').innerText;
+            if (!gpsAddress || gpsAddress.includes("Please allow")) { 
+                alert("Please click 'Fetch Live Location' first."); 
+                return; 
+            }
+            finalAddress = gpsAddress + " (" + gpsPincode + ")";
+        } 
+        else if (activeTab === 'manual-tab') {
+            let flat = document.getElementById('man_flat').value;
+            let street = document.getElementById('man_street').value;
+            let city = document.getElementById('man_city').value;
+            let pin = document.getElementById('man_pincode').value;
+            if (!flat || !street || !pin) { 
+                alert("Please fill out the complete manual address fields."); 
+                return; 
+            }
+            finalAddress = `${flat}, ${street}, ${city} - ${pin}`;
+        }
+
+        let paymentMode = document.querySelector('input[name="payment_method"]:checked').value;
+        let paymentText = paymentMode === 'COD' ? 'Cash on Delivery' : 'Paid Online (Verified)';
+        if (finalGrandTotal === 0 && finalWalletAppliedAmount > 0) {
+            paymentText = 'Paid via FASTX Wallet';
+        }
+
+        fetch("{% url 'cart_checkout' %}", { 
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: new URLSearchParams({
+                'payment_method': paymentMode,
+                'address_id': addressId,
+                'delivery_address_text': finalAddress,
+                'use_wallet': isWalletApplied,
+                'coupon_code': appliedCouponCode
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.status === 'razorpay_init') {
+                var options = {
+                    "key": data.key,
+                    "amount": data.amount,
+                    "currency": "INR",
+                    "name": "FASTX Delivery",
+                    "description": "Order Payment",
+                    "order_id": data.razorpay_order_id,
+                    "handler": function (response){
+                        verifyPayment(response.razorpay_payment_id, response.razorpay_order_id, response.razorpay_signature);
+                    },
+                    "prefill": {
+                        "name": data.user_name,
+                        "email": data.user_email,
+                        "contact": data.user_phone
+                    },
+                    "theme": {
+                        "color": "#FF6B00"
+                    }
+                };
+                var rzp1 = new Razorpay(options);
+                rzp1.on('payment.failed', function (response){
+                    alert("Payment Failed. Reason: " + response.error.description);
+                    window.location.href = "/payment/failed/";
+                });
+                rzp1.open();
+                
+            } else if(data.status === 'success') {
+                document.getElementById('modal-order-id').innerText = data.order_id || "#FX-NEW";
+                document.getElementById('modal-amount').innerText = '₹' + finalGrandTotal.toFixed(2);
+                document.getElementById('modal-payment').innerText = paymentText; 
+                
+                var myModal = new bootstrap.Modal(document.getElementById('orderSuccessModal'));
+                myModal.show();
+                
+                document.getElementById('orderSuccessModal').addEventListener('hidden.bs.modal', function () {
+                    window.location.href = "{% url 'track_orders' %}";
+                });
+            } else {
+                alert("Order failed: " + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Fetch Error:', error);
+            alert("A network error occurred while placing your order. Please try again.");
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+
+{% block title %}FASTX | My Wallet{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0" style="color: var(--fastx-navy);"><i class="bi bi-wallet2 text-warning me-2"></i>FASTX Wallet</h2>
+        <span class="badge bg-light text-dark border px-3 py-2 rounded-pill shadow-sm">
+            <i class="bi bi-shield-lock-fill text-success"></i> 256-bit Encrypted
+        </span>
+    </div>
+    
+    <div class="row g-4">
+        <div class="col-lg-5">
+            <div class="card border-0 rounded-4 shadow-sm mb-4 overflow-hidden position-relative" style="background: linear-gradient(135deg, #0A1F44, #0d2e66);">
+                <div class="position-absolute top-0 end-0 opacity-25 p-3" style="font-size: 8rem; line-height: 1; margin-top: -30px; margin-right: -20px;">
+                    <i class="bi bi-lightning-charge text-white"></i>
+                </div>
+                
+                <div class="card-body p-4 p-md-5 position-relative z-1 text-white">
+                    <p class="text-uppercase tracking-wider small fw-bold opacity-75 mb-1">Available Balance</p>
+                    <h1 class="display-4 fw-bold mb-3" id="display-balance">₹{{ wallet.balance|floatformat:2 }}</h1>
+                    
+                    <div class="d-flex align-items-center">
+                        <div class="bg-white bg-opacity-10 px-3 py-2 rounded-pill border border-light border-opacity-25 d-inline-block small">
+                            <i class="bi bi-coin text-warning me-1"></i> <strong>{{ wallet.fastx_coins }}</strong> FASTX Coins
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 rounded-4 shadow-sm p-4">
+                <h5 class="fw-bold mb-4 text-dark"><i class="bi bi-plus-circle-fill text-primary me-2"></i>Add Funds</h5>
+                
+                <label class="form-label small text-muted fw-bold text-uppercase">Enter Amount</label>
+                <div class="input-group input-group-lg mb-3 shadow-sm rounded-3 overflow-hidden border">
+                    <span class="input-group-text bg-light border-0 fw-bold text-dark">₹</span>
+                    <input type="number" id="topup-amount" class="form-control border-0 fw-bold" placeholder="0.00" min="1">
+                </div>
+
+                <div class="d-flex gap-2 mb-4">
+                    <button class="btn btn-outline-secondary btn-sm flex-fill fw-bold rounded-pill quick-amount" data-val="500">+ ₹500</button>
+                    <button class="btn btn-outline-secondary btn-sm flex-fill fw-bold rounded-pill quick-amount" data-val="1000">+ ₹1000</button>
+                    <button class="btn btn-outline-secondary btn-sm flex-fill fw-bold rounded-pill quick-amount" data-val="2000">+ ₹2000</button>
+                </div>
+
+                <button id="btn-process-topup" class="btn btn-dark btn-lg w-100 rounded-pill shadow fw-bold">
+                    Proceed to Top-Up
+                </button>
+                <div id="topup-spinner" class="text-center mt-3 d-none">
+                    <div class="spinner-border text-primary spinner-border-sm" role="status"></div>
+                    <small class="text-muted ms-2">Processing via Secure Gateway...</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="fw-bold mb-0 text-dark">Recent Transactions</h5>
+                    <button class="btn btn-sm btn-light border rounded-pill"><i class="bi bi-filter"></i> Filter</button>
+                </div>
+
+                <div class="transaction-list">
+                    {% for txn in transactions %}
+                    <div class="d-flex align-items-center justify-content-between py-3 border-bottom border-light">
+                        <div class="d-flex align-items-center">
+                            {% if txn.transaction_type == 'CREDIT' %}
+                                <div class="bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 45px; height: 45px;">
+                                    <i class="bi bi-arrow-down-left fs-5"></i>
+                                </div>
+                            {% else %}
+                                <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 45px; height: 45px;">
+                                    <i class="bi bi-arrow-up-right fs-5"></i>
+                                </div>
+                            {% endif %}
+                            
+                            <div>
+                                <h6 class="fw-bold mb-1 text-dark">{{ txn.description }}</h6>
+                                <small class="text-muted d-block">{{ txn.timestamp|date:"M d, Y, h:i A" }} • {{ txn.reference_id|default:"Wallet Txn" }}</small>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            {% if txn.transaction_type == 'CREDIT' %}
+                                <span class="fw-bold text-success fs-5">+₹{{ txn.amount|floatformat:2 }}</span>
+                            {% else %}
+                                <span class="fw-bold text-dark fs-5">-₹{{ txn.amount|floatformat:2 }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-receipt display-1 text-muted opacity-25"></i>
+                        <h6 class="fw-bold text-muted mt-3">No transactions yet</h6>
+                        <p class="small text-muted mb-0">Add funds to start using your FASTX Wallet.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3 z-3">
+  <div id="walletToast" class="toast align-items-center text-white bg-success border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body fw-bold">
+        <i class="bi bi-check-circle-fill me-2"></i> <span id="toastMessage">Funds added successfully!</span>
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        // Quick Amount Buttons Logic
+        document.querySelectorAll('.quick-amount').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.getElementById('topup-amount').value = this.getAttribute('data-val');
+            });
+        });
+
+        // Process Top-Up AJAX
+        document.getElementById('btn-process-topup').addEventListener('click', function() {
+            let amountInput = document.getElementById('topup-amount');
+            let amount = parseFloat(amountInput.value);
+            
+            if (!amount || amount <= 0) {
+                alert("Please enter a valid amount to add.");
+                return;
+            }
+
+            // Show loading state
+            this.classList.add('d-none');
+            document.getElementById('topup-spinner').classList.remove('d-none');
+
+            fetch("{% url 'add_funds_api' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ amount: amount })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    // Instantly update the massive balance UI
+                    document.getElementById('display-balance').innerText = '₹' + data.new_balance.toFixed(2);
+                    
+                    // Clear input & reset buttons
+                    amountInput.value = '';
+                    document.getElementById('btn-process-topup').classList.remove('d-none');
+                    document.getElementById('topup-spinner').classList.add('d-none');
+                    
+                    // Show Toast Notification
+                    document.getElementById('toastMessage').innerText = data.message;
+                    let toast = new bootstrap.Toast(document.getElementById('walletToast'), { delay: 4000 });
+                    toast.show();
+
+                    // Optional: Refresh the page after 2 seconds to show the new ledger transaction
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    alert(data.message);
+                    document.getElementById('btn-process-topup').classList.remove('d-none');
+                    document.getElementById('topup-spinner').classList.add('d-none');
+                }
+            })
+            .catch(error => {
+                alert("A secure gateway connection error occurred.");
+                document.getElementById('btn-process-topup').classList.remove('d-none');
+                document.getElementById('topup-spinner').classList.add('d-none');
+            });
+        });
+    });
+</script>
+{% endblock %}
