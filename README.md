@@ -34,10 +34,8 @@ FASTX is a comprehensive, multi-vendor 10-minute delivery ecosystem built with P
 * **Frontend:** HTML5, CSS3, Bootstrap 5, Vanilla JavaScript (AJAX/Fetch API)
 * **Third-Party APIs:** Razorpay, Twilio, Nominatim (OpenStreetMap Geocoding)
 
-## 📸 Application Flow
-*(Insert the images/screenshots described below here)*
 
 ## 👨‍💻 Author
 **Dhanush M**
 * Aspiring Software Developer
-* Connect with me on [LinkedIn](Link)
+* Connect with me on https://dhanush-m.vercel.app/
